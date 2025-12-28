@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin, Instagram, Facebook } from "lucide-react";
-import logo from "@/assets/logo.png";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -12,7 +11,7 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="inline-block">
-              <img src={logo} alt="Pixelpalast" className="h-12 w-auto" />
+              <span className="font-display text-2xl font-bold text-primary">Pixelpalast</span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed">
               Unvergessliche Erinnerungen für Ihre Veranstaltung. Professioneller
