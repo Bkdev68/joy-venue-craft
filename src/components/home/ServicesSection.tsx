@@ -2,13 +2,15 @@ import { Link } from "react-router-dom";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import event2 from "@/assets/gallery/event-2.jpg";
+import event3 from "@/assets/gallery/event-3.jpg";
 
 const services = [
   {
     title: "Photo Booth",
     description:
       "Hochwertige Sofortfotos mit professionellem Equipment. Individuelle Layouts und direkter Druck vor Ort.",
-    image: "https://pixelpalast.at/wp-content/uploads/2024/12/Pixelpalast-ZE-60-scaled.jpg",
+    image: event2,
     href: "/leistungen/photobooth",
     features: ["Sofortdruck", "Individuelle Layouts", "Props inklusive"],
   },
@@ -16,7 +18,7 @@ const services = [
     title: "360° Video Booth",
     description:
       "Spektakuläre 360-Grad-Videos, die Ihre Gäste ins Rampenlicht rücken. Perfekt für unvergessliche Momente.",
-    image: "https://pixelpalast.at/wp-content/uploads/2024/11/mar%E2%80%A0in-marcel-spinner-edited-scaled.jpg",
+    image: event3,
     href: "/leistungen/360-video-booth",
     features: ["Slow Motion", "Sofortiger Versand", "Kreative Overlays"],
   },

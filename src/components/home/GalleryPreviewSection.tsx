@@ -1,31 +1,18 @@
 import { useState } from "react";
 import { Section, SectionHeader } from "@/components/ui/section";
+import event1 from "@/assets/gallery/event-1.jpg";
+import event2 from "@/assets/gallery/event-2.jpg";
+import event3 from "@/assets/gallery/event-3.jpg";
+import event4 from "@/assets/gallery/event-4.jpg";
+import event5 from "@/assets/gallery/event-5.jpg";
 
 const galleryImages = [
-  {
-    src: "https://pixelpalast.at/wp-content/uploads/2025/07/Pixelpalast-ZE-59-scaled.jpg",
-    alt: "Gäste beim Photobooth Event",
-  },
-  {
-    src: "https://pixelpalast.at/wp-content/uploads/2025/07/Pixelpalast-ZE-28-1-scaled.jpg",
-    alt: "360° Video Booth in Aktion",
-  },
-  {
-    src: "https://pixelpalast.at/wp-content/uploads/2025/07/Pixelpalast-ZE-15-scaled.jpg",
-    alt: "Elegante Eventfotografie",
-  },
-  {
-    src: "https://pixelpalast.at/wp-content/uploads/2025/07/Pixelpalast-ZE-23-1-scaled.jpg",
-    alt: "Hochzeits-Photobooth",
-  },
-  {
-    src: "https://pixelpalast.at/wp-content/uploads/2025/07/BRIDGERTON-001-scaled.jpg",
-    alt: "Gäste bei Bridgerton Event",
-  },
-  {
-    src: "https://pixelpalast.at/wp-content/uploads/2025/07/BRIDGERTON-004-3-scaled.jpg",
-    alt: "Photobooth Ergebnisse",
-  },
+  { src: event1, alt: "Gäste beim Photobooth Event" },
+  { src: event2, alt: "360° Video Booth in Aktion" },
+  { src: event3, alt: "Elegante Eventfotografie" },
+  { src: event4, alt: "Hochzeits-Photobooth" },
+  { src: event5, alt: "Photobooth Ergebnisse" },
+  { src: event1, alt: "Professioneller Eventservice" },
 ];
 
 export function GalleryPreviewSection() {

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
+import heroImage from "@/assets/gallery/event-1.jpg";
 
 export function HeroSection() {
   return (
@@ -70,7 +71,7 @@ export function HeroSection() {
           <div className="relative opacity-0 animate-slide-in-right animation-delay-300">
             <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-xl">
               <img
-                src="https://pixelpalast.at/wp-content/uploads/2025/07/BRIDGERTON-184-scaled.jpg"
+                src={heroImage}
                 alt="Photobooth Event mit Gästen bei eleganter Veranstaltung"
                 className="w-full h-full object-cover"
                 loading="eager"
