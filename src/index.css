@@ -47,8 +47,8 @@
 
     /* Gradients - subtle like Apple */
     --gradient-gold: linear-gradient(135deg, hsl(211 100% 55%), hsl(211 100% 45%));
-    --gradient-cream: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 100%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 98%));
+    --gradient-cream: linear-gradient(180deg, hsl(var(--cream)), hsl(var(--background)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--cream)));
 
     /* Shadows - soft and diffused */
     --shadow-sm: 0 2px 8px 0 hsl(0 0% 0% / 0.04);
@@ -176,13 +176,9 @@
 
   /* Glassmorphism */
   .glass {
-    background: hsl(0 0% 100% / 0.7);
+    background: hsl(var(--background) / 0.7);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-  }
-
-  .dark .glass {
-    background: hsl(0 0% 0% / 0.7);
   }
 }
 
