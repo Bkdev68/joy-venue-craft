@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { cn } from "@/lib/utils";
 import event2 from "@/assets/gallery/event-2.jpg";
 import event3 from "@/assets/gallery/event-3.jpg";
 
@@ -12,7 +14,6 @@ const services = [
       "Hochwertige Sofortfotos mit professionellem Equipment. Individuelle Layouts und direkter Druck vor Ort.",
     image: event2,
     href: "/leistungen/photobooth",
-    features: ["Sofortdruck", "Individuelle Layouts", "Props inklusive"],
   },
   {
     title: "360° Video Booth",
@@ -20,74 +21,69 @@ const services = [
       "Spektakuläre 360-Grad-Videos, die Ihre Gäste ins Rampenlicht rücken. Perfekt für unvergessliche Momente.",
     image: event3,
     href: "/leistungen/360-video-booth",
-    features: ["Slow Motion", "Sofortiger Versand", "Kreative Overlays"],
   },
 ];
 
+function ServiceCard({ service, index }: { service: typeof services[0]; index: number }) {
+  const { ref, isVisible } = useScrollAnimation();
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "group relative transition-all duration-700",
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12",
+      )}
+      style={{ transitionDelay: `${index * 150}ms` }}
+    >
+      {/* Image */}
+      <div className="aspect-[4/3] rounded-3xl overflow-hidden mb-8">
+        <img
+          src={service.image}
+          alt={service.title}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          loading="lazy"
+        />
+      </div>
+
+      {/* Content */}
+      <h3 className="text-2xl sm:text-3xl font-semibold text-foreground mb-3 tracking-tight">
+        {service.title}
+      </h3>
+      <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+        {service.description}
+      </p>
+
+      <Link 
+        to={service.href}
+        className="inline-flex items-center text-primary font-medium hover:gap-3 transition-all duration-300 gap-2"
+      >
+        Mehr erfahren
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
 export function ServicesSection() {
   return (
-    <Section variant="muted" id="leistungen">
+    <Section id="leistungen">
       <SectionHeader
-        subtitle="Unsere Leistungen"
-        title="Was wir Ihnen bieten"
-        description="Eine individuell und auf Sie perfekt zugeschnittene Auswahl an verschiedensten Angeboten, die sowohl Fotoboxen als auch 360-Grad-Videospinner umfassen."
+        subtitle="Services"
+        title="Was wir bieten"
+        description="Eine perfekt auf Sie zugeschnittene Auswahl an Photobooth und 360° Video Services."
       />
 
-      <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
         {services.map((service, index) => (
-          <div
-            key={service.title}
-            className="group relative bg-card rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-border"
-          >
-            {/* Image */}
-            <div className="aspect-[4/3] overflow-hidden">
-              <img
-                src={service.image}
-                alt={service.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                loading="lazy"
-              />
-            </div>
-
-            {/* Content */}
-            <div className="p-6 lg:p-8">
-              <h3 className="font-display text-2xl font-bold text-foreground mb-3">
-                {service.title}
-              </h3>
-              <p className="text-muted-foreground mb-4 leading-relaxed">
-                {service.description}
-              </p>
-              
-              {/* Features */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {service.features.map((feature) => (
-                  <span
-                    key={feature}
-                    className="px-3 py-1 bg-accent text-accent-foreground text-sm rounded-full"
-                  >
-                    {feature}
-                  </span>
-                ))}
-              </div>
-
-              <Button asChild variant="outline" className="group/btn">
-                <Link to={service.href}>
-                  Mehr erfahren
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                </Link>
-              </Button>
-            </div>
-
-            {/* Decorative accent */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-gold opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          </div>
+          <ServiceCard key={service.title} service={service} index={index} />
         ))}
       </div>
 
-      <div className="text-center mt-12">
-        <Button asChild size="lg" className="shadow-gold">
+      <div className="text-center mt-16">
+        <Button asChild size="lg" className="rounded-full px-8 h-14 shadow-gold">
           <Link to="/leistungen">
-            Alle Leistungen ansehen
+            Alle Leistungen
             <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
         </Button>
