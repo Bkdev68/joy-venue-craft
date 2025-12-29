@@ -1,24 +1,56 @@
 import { Layout } from "@/components/layout/Layout";
-import { Section } from "@/components/ui/section";
 
 export default function Impressum() {
   return (
     <Layout>
-      <section className="pt-32 pb-16 bg-gradient-subtle">
-        <div className="container max-w-3xl text-center">
-          <h1 className="font-display text-4xl font-bold text-foreground">Impressum</h1>
+      <section className="pt-32 pb-24">
+        <div className="container max-w-3xl mx-auto px-6">
+          <h1 className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight mb-12">
+            Impressum
+          </h1>
+
+          <div className="prose prose-lg max-w-none text-muted-foreground">
+            <p className="text-foreground font-medium mb-6">
+              Informationen über den Diensteanbieter.
+            </p>
+
+            <div className="space-y-1 mb-8">
+              <p className="text-foreground font-semibold text-xl">Pixelpalast</p>
+              <p>Marcel Fischer</p>
+              <p>Wildstraße 5</p>
+              <p>2100 Korneuburg</p>
+              <p>Österreich</p>
+            </div>
+
+            <div className="space-y-3 mb-8">
+              <p>
+                <strong className="text-foreground">Tel.:</strong>{" "}
+                <a href="tel:+436602545493" className="text-primary hover:underline">
+                  +43 660 2545493
+                </a>
+              </p>
+              <p>
+                <strong className="text-foreground">E-Mail:</strong>{" "}
+                <a href="mailto:office@pixelpalast.at" className="text-primary hover:underline">
+                  office@pixelpalast.at
+                </a>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <p>
+                <strong className="text-foreground">Unternehmensgegenstand:</strong> Dienstleister
+              </p>
+              <p>
+                <strong className="text-foreground">Berufsrecht:</strong> Handelsgericht Wien
+              </p>
+              <p>
+                <strong className="text-foreground">Verleihungsstaat:</strong> Österreich
+              </p>
+            </div>
+          </div>
         </div>
       </section>
-      <Section>
-        <div className="max-w-3xl mx-auto prose prose-neutral dark:prose-invert">
-          <h2>Angaben gemäß § 5 ECG</h2>
-          <p><strong>Pixelpalast</strong><br />Wien, Österreich</p>
-          <h3>Kontakt</h3>
-          <p>Telefon: +43 660 2545493<br />E-Mail: office@pixelpalast.at</p>
-          <h3>Haftungsausschluss</h3>
-          <p>Die Inhalte dieser Website wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.</p>
-        </div>
-      </Section>
     </Layout>
   );
 }
