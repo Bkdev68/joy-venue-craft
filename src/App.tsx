@@ -29,6 +29,10 @@ import AdminFAQ from "./pages/admin/AdminFAQ";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminInsights from "./pages/admin/AdminInsights";
+import AdminHome from "./pages/admin/AdminHome";
+import AdminLeistungen from "./pages/admin/AdminLeistungen";
+import AdminPreise from "./pages/admin/AdminPreise";
+import AdminKontakt from "./pages/admin/AdminKontakt";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +68,10 @@ const App = () => (
                 <Route path="faq" element={<AdminFAQ />} />
                 <Route path="inhalte" element={<AdminContent />} />
                 <Route path="einstellungen" element={<AdminSettings />} />
+                <Route path="seite/home" element={<AdminHome />} />
+                <Route path="seite/leistungen" element={<AdminLeistungen />} />
+                <Route path="seite/preise" element={<AdminPreise />} />
+                <Route path="seite/kontakt" element={<AdminKontakt />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
