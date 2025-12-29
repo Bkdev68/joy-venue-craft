@@ -22,6 +22,7 @@ const navItems = [
   { href: '/admin/testimonials', icon: Star, label: 'Testimonials' },
   { href: '/admin/faq', icon: HelpCircle, label: 'FAQ' },
   { href: '/admin/inhalte', icon: FileText, label: 'Inhalte' },
+  { href: '/admin/einstellungen', icon: Settings, label: 'Einstellungen' },
 ];
 
 export default function AdminLayout() {

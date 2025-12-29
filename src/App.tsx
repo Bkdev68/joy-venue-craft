@@ -25,7 +25,7 @@ import AdminServices from "./pages/admin/AdminServices";
 import AdminTestimonials from "./pages/admin/AdminTestimonials";
 import AdminFAQ from "./pages/admin/AdminFAQ";
 import AdminContent from "./pages/admin/AdminContent";
-
+import AdminSettings from "./pages/admin/AdminSettings";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -56,6 +56,7 @@ const App = () => (
               <Route path="testimonials" element={<AdminTestimonials />} />
               <Route path="faq" element={<AdminFAQ />} />
               <Route path="inhalte" element={<AdminContent />} />
+              <Route path="einstellungen" element={<AdminSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
