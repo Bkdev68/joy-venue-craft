@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 
@@ -63,8 +64,9 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Desktop CTA */}
-        <div className="hidden lg:block">
+        {/* Desktop CTA & Theme Toggle */}
+        <div className="hidden lg:flex items-center gap-3">
+          <ThemeToggle />
           <Button asChild className="rounded-full px-6 shadow-gold">
             <Link to="/buchen">Jetzt buchen</Link>
           </Button>
@@ -106,8 +108,9 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          <div className="pt-4 border-t border-border">
-            <Button asChild className="w-full rounded-full shadow-gold">
+          <div className="pt-4 border-t border-border flex items-center justify-between gap-4">
+            <ThemeToggle />
+            <Button asChild className="flex-1 rounded-full shadow-gold">
               <Link to="/buchen">Jetzt buchen</Link>
             </Button>
           </div>
