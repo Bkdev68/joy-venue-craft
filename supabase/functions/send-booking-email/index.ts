@@ -47,6 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Received booking request:", booking);
 
     const adminEmail = booking.adminEmail || "buchung@pixelpalast.at";
+    const fromEmail = adminEmail;
 
     // Save booking to database
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -73,9 +74,10 @@ const handler = async (req: Request): Promise<Response> => {
     } else {
       console.log("Booking saved to database");
     }
-    
+
     // Email to admin
     const adminEmailResponse = await resend.emails.send({
+      // Keep resend.dev sender for now to avoid breaking admin notifications while domain verification is pending
       from: "PixelPalast Buchungen <onboarding@resend.dev>",
       to: [adminEmail],
       subject: `Neue Buchungsanfrage: ${booking.service} - ${booking.eventType}`,
@@ -161,9 +163,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Admin email sent:", adminEmailResponse);
 
-    // Confirmation email to customer
+    // Confirmation email to customer (requires verified domain at Resend)
     const customerEmailResponse = await resend.emails.send({
-      from: "PixelPalast <onboarding@resend.dev>",
+      from: `PixelPalast <${fromEmail}>`,
       to: [booking.email],
       subject: "Ihre Buchungsanfrage bei PixelPalast",
       html: `
@@ -202,19 +204,15 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Customer email sent:", customerEmailResponse);
+    const customerEmailSent = !customerEmailResponse?.error;
+    if (!customerEmailSent) {
+      console.warn("Customer email failed:", customerEmailResponse?.error);
+    }
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        adminEmail: adminEmailResponse,
-        customerEmail: customerEmailResponse 
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, customerEmailSent }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   } catch (error: any) {
     console.error("Error in send-booking-email function:", error);
     return new Response(

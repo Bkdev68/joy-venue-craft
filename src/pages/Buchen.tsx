@@ -197,7 +197,7 @@ export default function Buchen() {
         ? `${formData.timeFrom} - ${formData.timeTo}${formData.timeTo < formData.timeFrom ? ' (nächster Tag)' : ''}`
         : '';
       
-      const { error } = await supabase.functions.invoke('send-booking-email', {
+      const { data, error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           date: formData.date?.toLocaleDateString("de-AT", {
             weekday: "long",
@@ -227,17 +227,23 @@ export default function Buchen() {
       });
 
       if (error) throw error;
-      
+
+      const customerEmailSent = data?.customerEmailSent !== false;
+
       // Track successful booking conversion
       trackBookingComplete(
         selectedService?.title || formData.service,
         selectedPkg?.name || formData.package,
         priceNum
       );
-      
+
       toast({
-        title: "Buchungsanfrage gesendet!",
-        description: "Wir melden uns innerhalb von 24 Stunden bei Ihnen.",
+        title: customerEmailSent
+          ? "Buchungsanfrage gesendet!"
+          : "Buchungsanfrage gesendet (ohne Bestätigungsmail)",
+        description: customerEmailSent
+          ? "Wir melden uns innerhalb von 24 Stunden bei Ihnen."
+          : "Ihre Anfrage ist bei uns eingegangen – wir melden uns innerhalb von 24 Stunden bei Ihnen.",
       });
       
       setStep(5);
