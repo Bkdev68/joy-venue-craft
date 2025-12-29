@@ -99,7 +99,7 @@ const addons = [
   { name: "USB-Stick mit allen Dateien", price: "+€39" },
   { name: "Greenscreen-Hintergrund", price: "+€79" },
   { name: "Zusätzlicher Mitarbeiter", price: "+€79/h" },
-  { name: "Anfahrt über 50km", price: "+€0,50/km" },
+  { name: "Anfahrt", price: "€1/km" },
 ];
 
 const faqs = [
@@ -111,7 +111,7 @@ const faqs = [
   {
     question: "Ist die Anfahrt im Preis enthalten?",
     answer:
-      "Für Events in Wien und im Umkreis von 50km ist die Anfahrt inklusive. Darüber hinaus berechnen wir €0,50 pro zusätzlichem Kilometer.",
+      "Die Anfahrt wird mit €1 pro Kilometer berechnet. Wir kommen überall hin – nicht nur Wien und Umgebung!",
   },
   {
     question: "Kann ich die Pakete individuell anpassen?",

@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 const faqs = [
   { q: "Wie weit im Voraus sollte ich buchen?", a: "Wir empfehlen 4-6 Wochen, für Hochzeiten 3-6 Monate Vorlaufzeit." },
-  { q: "Ist die Anfahrt im Preis enthalten?", a: "Ja, für Wien und Umkreis 50km. Darüber €0,50/km." },
+  { q: "Ist die Anfahrt im Preis enthalten?", a: "Die Anfahrt wird mit €1 pro Kilometer berechnet. Wir kommen überall hin – nicht nur Wien!" },
   { q: "Wie lange dauert der Auf-/Abbau?", a: "Aufbau ca. 45-60 Min, Abbau ca. 30 Min – nicht in Buchungszeit enthalten." },
   { q: "Wann erhalte ich die Dateien?", a: "Sofortversand vor Ort, Online-Galerie in 24-48 Stunden." },
   { q: "Kann ich Pakete anpassen?", a: "Ja, kontaktieren Sie uns für individuelle Angebote." },
