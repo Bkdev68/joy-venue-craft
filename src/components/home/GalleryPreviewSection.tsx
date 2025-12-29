@@ -13,7 +13,6 @@ const galleryImages = [
   { src: event3, alt: "Elegante Eventfotografie" },
   { src: event4, alt: "Hochzeits-Photobooth" },
   { src: event5, alt: "Photobooth Ergebnisse" },
-  { src: event1, alt: "Professioneller Eventservice" },
 ];
 
 function GalleryImage({ image, index }: { image: typeof galleryImages[0]; index: number }) {
