@@ -16,17 +16,26 @@ interface BookingRequest {
   timeFrom?: string;
   timeTo?: string;
   timeInfo?: string;
+  hours?: number;
   service: string;
   packageName: string;
-  packageDuration: string;
+  packageDuration?: string;
   packagePrice: string;
   packagePriceNum: number;
+  basePrice?: number;
+  hourlyRate?: number;
   name: string;
   email: string;
   phone?: string;
   message?: string;
   adminEmail?: string;
 }
+
+// Helper to safely display values (avoid undefined/null appearing in email)
+const safeValue = (val: any, fallback: string = '-'): string => {
+  if (val === undefined || val === null || val === '') return fallback;
+  return String(val);
+};
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -80,41 +89,53 @@ const handler = async (req: Request): Promise<Response> => {
           <table style="width: 100%; border-collapse: collapse;">
             <tr style="background-color: #f9f9f9;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Datum:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${booking.date}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${safeValue(booking.date)}</td>
             </tr>
             ${booking.timeInfo ? `
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Uhrzeit:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${booking.timeInfo}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${safeValue(booking.timeInfo)}</td>
+            </tr>
+            ` : ''}
+            ${booking.hours ? `
+            <tr style="background-color: #f9f9f9;">
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Dauer:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${booking.hours} Stunden</td>
             </tr>
             ` : ''}
             <tr style="background-color: #f9f9f9;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Event-Art:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${booking.eventType}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${safeValue(booking.eventType)}</td>
             </tr>
             <tr style="background-color: #f9f9f9;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Service:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${booking.service}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${safeValue(booking.service)}</td>
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Paket:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${booking.packageName} (${booking.packageDuration})</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${safeValue(booking.packageName)}${booking.packageDuration ? ` (${booking.packageDuration})` : ''}</td>
             </tr>
             <tr style="background-color: #f9f9f9;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Preis:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; color: #D4AF37; font-weight: bold;">${booking.packagePrice}</td>
+              <td style="padding: 10px; border: 1px solid #ddd; color: #D4AF37; font-weight: bold;">${safeValue(booking.packagePrice)}</td>
             </tr>
+            ${booking.basePrice && booking.hourlyRate && booking.hours ? `
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Preisberechnung:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">€${booking.basePrice} Grundpreis + ${booking.hours}h × €${booking.hourlyRate}/Std</td>
+            </tr>
+            ` : ''}
           </table>
           
           <h2 style="color: #333; margin-top: 20px;">Kontaktdaten</h2>
           <table style="width: 100%; border-collapse: collapse;">
             <tr style="background-color: #f9f9f9;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Name:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${booking.name}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${safeValue(booking.name)}</td>
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>E-Mail:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;"><a href="mailto:${booking.email}">${booking.email}</a></td>
+              <td style="padding: 10px; border: 1px solid #ddd;"><a href="mailto:${safeValue(booking.email)}">${safeValue(booking.email)}</a></td>
             </tr>
             ${booking.phone ? `
             <tr style="background-color: #f9f9f9;">
@@ -149,18 +170,19 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #D4AF37;">Vielen Dank für Ihre Anfrage!</h1>
           
-          <p>Hallo ${booking.name},</p>
+          <p>Hallo ${safeValue(booking.name)},</p>
           
           <p>wir haben Ihre Buchungsanfrage erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.</p>
           
           <h2 style="color: #333; margin-top: 20px;">Ihre Buchungsdetails</h2>
           <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
-            <p><strong>Datum:</strong> ${booking.date}</p>
-            ${booking.timeInfo ? `<p><strong>Uhrzeit:</strong> ${booking.timeInfo}</p>` : ''}
-            <p><strong>Event-Art:</strong> ${booking.eventType}</p>
-            <p><strong>Service:</strong> ${booking.service}</p>
-            <p><strong>Paket:</strong> ${booking.packageName} (${booking.packageDuration})</p>
-            <p style="color: #D4AF37; font-size: 20px;"><strong>Preis:</strong> ${booking.packagePrice}</p>
+            <p><strong>Datum:</strong> ${safeValue(booking.date)}</p>
+            ${booking.timeInfo ? `<p><strong>Uhrzeit:</strong> ${safeValue(booking.timeInfo)}</p>` : ''}
+            ${booking.hours ? `<p><strong>Dauer:</strong> ${booking.hours} Stunden</p>` : ''}
+            <p><strong>Event-Art:</strong> ${safeValue(booking.eventType)}</p>
+            <p><strong>Service:</strong> ${safeValue(booking.service)}</p>
+            <p><strong>Paket:</strong> ${safeValue(booking.packageName)}${booking.packageDuration ? ` (${booking.packageDuration})` : ''}</p>
+            <p style="color: #D4AF37; font-size: 20px;"><strong>Preis:</strong> ${safeValue(booking.packagePrice)}</p>
           </div>
           
           <p style="margin-top: 20px;">
