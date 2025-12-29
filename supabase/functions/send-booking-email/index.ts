@@ -13,6 +13,9 @@ interface BookingRequest {
   date: string;
   dateRaw: string;
   eventType: string;
+  timeFrom?: string;
+  timeTo?: string;
+  timeInfo?: string;
   service: string;
   packageName: string;
   packageDuration: string;
@@ -79,7 +82,13 @@ const handler = async (req: Request): Promise<Response> => {
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Datum:</strong></td>
               <td style="padding: 10px; border: 1px solid #ddd;">${booking.date}</td>
             </tr>
+            ${booking.timeInfo ? `
             <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Uhrzeit:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${booking.timeInfo}</td>
+            </tr>
+            ` : ''}
+            <tr style="background-color: #f9f9f9;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Event-Art:</strong></td>
               <td style="padding: 10px; border: 1px solid #ddd;">${booking.eventType}</td>
             </tr>
@@ -147,6 +156,7 @@ const handler = async (req: Request): Promise<Response> => {
           <h2 style="color: #333; margin-top: 20px;">Ihre Buchungsdetails</h2>
           <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
             <p><strong>Datum:</strong> ${booking.date}</p>
+            ${booking.timeInfo ? `<p><strong>Uhrzeit:</strong> ${booking.timeInfo}</p>` : ''}
             <p><strong>Event-Art:</strong> ${booking.eventType}</p>
             <p><strong>Service:</strong> ${booking.service}</p>
             <p><strong>Paket:</strong> ${booking.packageName} (${booking.packageDuration})</p>

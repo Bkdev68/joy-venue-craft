@@ -6,32 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Check, Calendar as CalendarIcon, Package, User, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Calendar as CalendarIcon, Package, User, Send, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
-const services = [
-  { id: "photobooth", name: "Photo Booth", price: "Ab €390" },
-  { id: "360video", name: "360° Video Booth", price: "Ab €490" },
-  { id: "audio", name: "Audio Gästebuch", price: "Ab €290" },
-];
+interface Service {
+  id: string;
+  title: string;
+  slug: string;
+  price_from: number | null;
+}
 
-const packages = {
-  photobooth: [
-    { id: "starter", name: "Starter", duration: "2 Stunden", price: "€390" },
-    { id: "classic", name: "Classic", duration: "4 Stunden", price: "€590" },
-    { id: "premium", name: "Premium", duration: "6 Stunden", price: "€790" },
-  ],
-  "360video": [
-    { id: "starter", name: "Starter", duration: "2 Stunden", price: "€490" },
-    { id: "classic", name: "Classic", duration: "4 Stunden", price: "€790" },
-    { id: "premium", name: "Premium", duration: "6 Stunden", price: "€1090" },
-  ],
-  audio: [
-    { id: "komplett", name: "Komplett-Paket", duration: "Ganzer Tag", price: "€290" },
-  ],
-};
+interface PackageData {
+  id: string;
+  name: string;
+  duration: string | null;
+  price: number;
+  service_id: string | null;
+}
 
 const eventTypes = [
   "Hochzeit",
@@ -43,15 +37,35 @@ const eventTypes = [
   "Sonstiges",
 ];
 
+// Generate time options (00:00 - 23:30 in 30min steps)
+const generateTimeOptions = () => {
+  const options: string[] = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let min = 0; min < 60; min += 30) {
+      const h = hour.toString().padStart(2, '0');
+      const m = min.toString().padStart(2, '0');
+      options.push(`${h}:${m}`);
+    }
+  }
+  return options;
+};
+
+const timeOptions = generateTimeOptions();
+
 export default function Buchen() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [packages, setPackages] = useState<PackageData[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   
   const [formData, setFormData] = useState({
     date: undefined as Date | undefined,
     eventType: "",
+    timeFrom: "",
+    timeTo: "",
     service: "",
     package: "",
     name: "",
@@ -61,19 +75,46 @@ export default function Buchen() {
   });
 
   useEffect(() => {
-    const fetchAdminEmail = async () => {
-      const { data } = await supabase
+    const fetchData = async () => {
+      setLoadingData(true);
+      
+      // Fetch admin email
+      const { data: emailData } = await supabase
         .from('site_content')
         .select('text_value')
         .eq('section', 'settings')
         .eq('key', 'booking_email')
-        .single();
+        .maybeSingle();
       
-      if (data?.text_value) {
-        setAdminEmail(data.text_value);
+      if (emailData?.text_value) {
+        setAdminEmail(emailData.text_value);
       }
+      
+      // Fetch services from database
+      const { data: servicesData } = await supabase
+        .from('services')
+        .select('id, title, slug, price_from')
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (servicesData) {
+        setServices(servicesData);
+      }
+      
+      // Fetch packages from database
+      const { data: packagesData } = await supabase
+        .from('packages')
+        .select('id, name, duration, price, service_id')
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (packagesData) {
+        setPackages(packagesData);
+      }
+      
+      setLoadingData(false);
     };
-    fetchAdminEmail();
+    fetchData();
   }, []);
 
   const handleNext = () => {
@@ -89,10 +130,14 @@ export default function Buchen() {
     
     try {
       const selectedService = services.find(s => s.id === formData.service);
-      const selectedPkg = packages[formData.service as keyof typeof packages]?.find(p => p.id === formData.package);
+      const selectedPkg = packages.find(p => p.id === formData.package);
       
-      const priceStr = selectedPkg?.price || '0';
-      const priceNum = parseFloat(priceStr.replace(/[^0-9]/g, '')) || 0;
+      const priceNum = selectedPkg?.price || 0;
+      
+      // Format time info (supports overnight events)
+      const timeInfo = formData.timeFrom && formData.timeTo 
+        ? `${formData.timeFrom} - ${formData.timeTo}${formData.timeTo < formData.timeFrom ? ' (nächster Tag)' : ''}`
+        : '';
       
       const { error } = await supabase.functions.invoke('send-booking-email', {
         body: {
@@ -104,10 +149,13 @@ export default function Buchen() {
           }),
           dateRaw: formData.date?.toISOString().split('T')[0],
           eventType: formData.eventType,
-          service: selectedService?.name || formData.service,
+          timeFrom: formData.timeFrom,
+          timeTo: formData.timeTo,
+          timeInfo,
+          service: selectedService?.title || formData.service,
           packageName: selectedPkg?.name || formData.package,
           packageDuration: selectedPkg?.duration || '',
-          packagePrice: selectedPkg?.price || '',
+          packagePrice: `€${priceNum}`,
           packagePriceNum: priceNum,
           name: formData.name,
           email: formData.email,
@@ -150,9 +198,13 @@ export default function Buchen() {
     }
   };
 
-  const selectedPackage = formData.service && formData.package
-    ? packages[formData.service as keyof typeof packages]?.find(p => p.id === formData.package)
+  const selectedPackage = formData.package
+    ? packages.find(p => p.id === formData.package)
     : null;
+
+  const servicePackages = formData.service
+    ? packages.filter(p => p.service_id === formData.service)
+    : [];
 
   return (
     <Layout>
@@ -220,6 +272,60 @@ export default function Buchen() {
                 />
               </div>
 
+              {/* Time Selection */}
+              <div className="space-y-3">
+                <Label className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Uhrzeit (optional)
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Events können auch über Mitternacht gehen (z.B. 20:00 - 02:00)
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="timeFrom" className="text-sm">Von</Label>
+                    <Select
+                      value={formData.timeFrom}
+                      onValueChange={(value) => setFormData({ ...formData, timeFrom: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Startzeit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeOptions.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="timeTo" className="text-sm">Bis</Label>
+                    <Select
+                      value={formData.timeTo}
+                      onValueChange={(value) => setFormData({ ...formData, timeTo: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Endzeit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeOptions.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {formData.timeFrom && formData.timeTo && formData.timeTo < formData.timeFrom && (
+                  <p className="text-sm text-primary">
+                    ✓ Event geht über Mitternacht (endet am nächsten Tag)
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-3">
                 <Label className="text-base">Art des Events</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -266,8 +372,10 @@ export default function Buchen() {
                           : "border-border bg-card hover:border-primary/50"
                       )}
                     >
-                      <span className="font-medium text-foreground">{service.name}</span>
-                      <span className="text-primary font-semibold">{service.price}</span>
+                      <span className="font-medium text-foreground">{service.title}</span>
+                      <span className="text-primary font-semibold">
+                        {service.price_from ? `Ab €${service.price_from}` : ''}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -277,7 +385,7 @@ export default function Buchen() {
                 <div className="space-y-3">
                   <Label className="text-base">Paket wählen</Label>
                   <div className="grid gap-3">
-                    {packages[formData.service as keyof typeof packages]?.map((pkg) => (
+                    {servicePackages.map((pkg) => (
                       <button
                         key={pkg.id}
                         onClick={() => setFormData({ ...formData, package: pkg.id })}
@@ -290,11 +398,18 @@ export default function Buchen() {
                       >
                         <div>
                           <span className="font-medium text-foreground">{pkg.name}</span>
-                          <span className="text-muted-foreground text-sm ml-2">({pkg.duration})</span>
+                          {pkg.duration && (
+                            <span className="text-muted-foreground text-sm ml-2">({pkg.duration})</span>
+                          )}
                         </div>
-                        <span className="text-primary font-semibold">{pkg.price}</span>
+                        <span className="text-primary font-semibold">€{pkg.price}</span>
                       </button>
                     ))}
+                    {servicePackages.length === 0 && (
+                      <p className="text-muted-foreground text-center py-4">
+                        Keine Pakete für diesen Service verfügbar.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -379,6 +494,17 @@ export default function Buchen() {
                     })}
                   </span>
                 </div>
+                {(formData.timeFrom || formData.timeTo) && (
+                  <div className="flex justify-between py-3 border-b border-border">
+                    <span className="text-muted-foreground">Uhrzeit</span>
+                    <span className="font-medium text-foreground">
+                      {formData.timeFrom} - {formData.timeTo}
+                      {formData.timeFrom && formData.timeTo && formData.timeTo < formData.timeFrom && (
+                        <span className="text-primary text-sm ml-1">(+1 Tag)</span>
+                      )}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between py-3 border-b border-border">
                   <span className="text-muted-foreground">Event-Art</span>
                   <span className="font-medium text-foreground">{formData.eventType}</span>
@@ -386,7 +512,7 @@ export default function Buchen() {
                 <div className="flex justify-between py-3 border-b border-border">
                   <span className="text-muted-foreground">Service</span>
                   <span className="font-medium text-foreground">
-                    {services.find(s => s.id === formData.service)?.name}
+                    {services.find(s => s.id === formData.service)?.title}
                   </span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-border">
@@ -405,7 +531,9 @@ export default function Buchen() {
                 </div>
                 <div className="flex justify-between py-3">
                   <span className="text-muted-foreground">Preis</span>
-                  <span className="font-bold text-xl text-primary">{selectedPackage?.price}</span>
+                  <span className="font-bold text-xl text-primary">
+                    {selectedPackage?.price ? `€${selectedPackage.price}` : '-'}
+                  </span>
                 </div>
               </div>
 
