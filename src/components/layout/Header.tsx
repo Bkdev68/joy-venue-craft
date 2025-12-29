@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -40,8 +41,8 @@ export function Header() {
     >
       <div className="container max-w-6xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <span className="text-xl font-semibold text-foreground tracking-tight">Pixelpalast</span>
+        <Link to="/" className="flex items-center">
+          <img src={logo} alt="Pixelpalast" className="h-10 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}
