@@ -10,13 +10,15 @@ import {
   HelpCircle, 
   Package, 
   LogOut,
-  Settings
+  Settings,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
 
 const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/admin/insights', icon: BarChart3, label: 'Insights' },
   { href: '/admin/galerie', icon: Image, label: 'Galerie' },
   { href: '/admin/services', icon: Package, label: 'Services' },
   { href: '/admin/testimonials', icon: Star, label: 'Testimonials' },

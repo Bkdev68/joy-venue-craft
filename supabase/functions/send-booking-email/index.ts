@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -10,11 +11,13 @@ const corsHeaders = {
 
 interface BookingRequest {
   date: string;
+  dateRaw: string;
   eventType: string;
   service: string;
   packageName: string;
   packageDuration: string;
   packagePrice: string;
+  packagePriceNum: number;
   name: string;
   email: string;
   phone?: string;
@@ -32,6 +35,32 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Received booking request:", booking);
 
     const adminEmail = booking.adminEmail || "buchung@pixelpalast.at";
+
+    // Save booking to database
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { error: dbError } = await supabase
+      .from("bookings")
+      .insert({
+        date: booking.dateRaw,
+        event_type: booking.eventType,
+        service_name: booking.service,
+        package_name: booking.packageName,
+        package_price: booking.packagePriceNum || 0,
+        customer_name: booking.name,
+        customer_email: booking.email,
+        customer_phone: booking.phone || null,
+        message: booking.message || null,
+        status: "pending",
+      });
+
+    if (dbError) {
+      console.error("Error saving booking to database:", dbError);
+    } else {
+      console.log("Booking saved to database");
+    }
     
     // Email to admin
     const adminEmailResponse = await resend.emails.send({

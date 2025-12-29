@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Save, Mail, Phone, MapPin, Instagram, Facebook } from 'lucide-react';
+import { Save, Mail, Phone, MapPin, Instagram, Facebook, BarChart3 } from 'lucide-react';
 
 interface Settings {
   booking_email: string;
@@ -14,6 +14,7 @@ interface Settings {
   address: string;
   instagram: string;
   facebook: string;
+  google_analytics_id: string;
 }
 
 export default function AdminSettings() {
@@ -24,6 +25,7 @@ export default function AdminSettings() {
     address: '',
     instagram: '',
     facebook: '',
+    google_analytics_id: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,6 +52,7 @@ export default function AdminSettings() {
           address: settingsMap.address || '',
           instagram: settingsMap.instagram || '',
           facebook: settingsMap.facebook || '',
+          google_analytics_id: settingsMap.google_analytics_id || '',
         });
       } catch (error) {
         console.error('Error fetching settings:', error);
@@ -205,6 +208,33 @@ export default function AdminSettings() {
                 onChange={(e) => setSettings(prev => ({ ...prev, facebook: e.target.value }))}
                 placeholder="https://facebook.com/pixelpalast"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Google Analytics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Google Analytics
+            </CardTitle>
+            <CardDescription>
+              Tracking-ID für Website-Analysen (Besucher, Traffic-Quellen, etc.)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="google_analytics_id">Measurement ID</Label>
+              <Input
+                id="google_analytics_id"
+                value={settings.google_analytics_id}
+                onChange={(e) => setSettings(prev => ({ ...prev, google_analytics_id: e.target.value }))}
+                placeholder="G-XXXXXXXXXX"
+              />
+              <p className="text-xs text-muted-foreground">
+                Finden Sie Ihre ID unter Google Analytics → Admin → Datenstreams → Web
+              </p>
             </div>
           </CardContent>
         </Card>

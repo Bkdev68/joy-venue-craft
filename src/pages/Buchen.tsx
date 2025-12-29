@@ -91,6 +91,9 @@ export default function Buchen() {
       const selectedService = services.find(s => s.id === formData.service);
       const selectedPkg = packages[formData.service as keyof typeof packages]?.find(p => p.id === formData.package);
       
+      const priceStr = selectedPkg?.price || '0';
+      const priceNum = parseFloat(priceStr.replace(/[^0-9]/g, '')) || 0;
+      
       const { error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           date: formData.date?.toLocaleDateString("de-AT", {
@@ -99,11 +102,13 @@ export default function Buchen() {
             month: "long",
             day: "numeric",
           }),
+          dateRaw: formData.date?.toISOString().split('T')[0],
           eventType: formData.eventType,
           service: selectedService?.name || formData.service,
           packageName: selectedPkg?.name || formData.package,
           packageDuration: selectedPkg?.duration || '',
           packagePrice: selectedPkg?.price || '',
+          packagePriceNum: priceNum,
           name: formData.name,
           email: formData.email,
           phone: formData.phone || undefined,
