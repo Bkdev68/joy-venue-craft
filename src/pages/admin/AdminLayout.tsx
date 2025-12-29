@@ -15,7 +15,8 @@ import {
   Home,
   Layers,
   CreditCard,
-  Mail
+  Mail,
+  CalendarCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
@@ -23,6 +24,7 @@ import logo from '@/assets/logo.png';
 const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/insights', icon: BarChart3, label: 'Insights' },
+  { href: '/admin/buchungen', icon: CalendarCheck, label: 'Buchungen' },
   { type: 'divider', label: 'Seiten' },
   { href: '/admin/seite/home', icon: Home, label: 'Home' },
   { href: '/admin/seite/leistungen', icon: Layers, label: 'Leistungen' },
