@@ -25,6 +25,8 @@ interface PackageData {
   name: string;
   duration: string | null;
   price: number;
+  base_price: number | null;
+  hourly_rate: number | null;
   service_id: string | null;
 }
 
@@ -105,7 +107,7 @@ export default function Buchen() {
       // Fetch packages from database
       const { data: packagesData } = await supabase
         .from('packages')
-        .select('id, name, duration, price, service_id')
+        .select('id, name, duration, price, base_price, hourly_rate, service_id')
         .eq('is_active', true)
         .order('sort_order');
       
@@ -143,6 +145,44 @@ export default function Buchen() {
     trackBookingStep(1, 'Datum & Event');
   }, []);
 
+  // Calculate hours from time selection
+  const calculateHours = (from: string, to: string): number => {
+    if (!from || !to) return 0;
+    
+    const [fromH, fromM] = from.split(':').map(Number);
+    const [toH, toM] = to.split(':').map(Number);
+    
+    let fromMinutes = fromH * 60 + fromM;
+    let toMinutes = toH * 60 + toM;
+    
+    // Handle overnight events
+    if (toMinutes <= fromMinutes) {
+      toMinutes += 24 * 60;
+    }
+    
+    return (toMinutes - fromMinutes) / 60;
+  };
+
+  // Calculate total price based on base_price + hourly_rate * hours
+  const calculateTotalPrice = (): { total: number; hours: number; basePrice: number; hourlyRate: number } => {
+    const selectedPkg = packages.find(p => p.id === formData.package);
+    if (!selectedPkg) return { total: 0, hours: 0, basePrice: 0, hourlyRate: 0 };
+    
+    const basePrice = selectedPkg.base_price || selectedPkg.price || 0;
+    const hourlyRate = selectedPkg.hourly_rate || 0;
+    const hours = calculateHours(formData.timeFrom, formData.timeTo);
+    
+    // If no time selected, just show base price
+    if (!formData.timeFrom || !formData.timeTo) {
+      return { total: basePrice, hours: 0, basePrice, hourlyRate };
+    }
+    
+    const total = basePrice + (hourlyRate * hours);
+    return { total, hours, basePrice, hourlyRate };
+  };
+
+  const priceDetails = calculateTotalPrice();
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     
@@ -150,7 +190,7 @@ export default function Buchen() {
       const selectedService = services.find(s => s.id === formData.service);
       const selectedPkg = packages.find(p => p.id === formData.package);
       
-      const priceNum = selectedPkg?.price || 0;
+      const { total: priceNum, hours, basePrice, hourlyRate } = priceDetails;
       
       // Format time info (supports overnight events)
       const timeInfo = formData.timeFrom && formData.timeTo 
@@ -170,11 +210,14 @@ export default function Buchen() {
           timeFrom: formData.timeFrom,
           timeTo: formData.timeTo,
           timeInfo,
+          hours: hours > 0 ? hours : undefined,
           service: selectedService?.title || formData.service,
           packageName: selectedPkg?.name || formData.package,
           packageDuration: selectedPkg?.duration || '',
-          packagePrice: `€${priceNum}`,
+          packagePrice: `€${priceNum.toFixed(2)}`,
           packagePriceNum: priceNum,
+          basePrice,
+          hourlyRate,
           name: formData.name,
           email: formData.email,
           phone: formData.phone || undefined,
@@ -427,7 +470,12 @@ export default function Buchen() {
                             <span className="text-muted-foreground text-sm ml-2">({pkg.duration})</span>
                           )}
                         </div>
-                        <span className="text-primary font-semibold">€{pkg.price}</span>
+                        <div className="text-right">
+                          <span className="text-primary font-semibold">€{pkg.base_price || pkg.price}</span>
+                          {(pkg.hourly_rate ?? 0) > 0 && (
+                            <span className="text-muted-foreground text-sm block">+€{pkg.hourly_rate}/Std</span>
+                          )}
+                        </div>
                       </button>
                     ))}
                     {servicePackages.length === 0 && (
@@ -546,6 +594,12 @@ export default function Buchen() {
                     {selectedPackage?.name} ({selectedPackage?.duration})
                   </span>
                 </div>
+                {priceDetails.hours > 0 && (
+                  <div className="flex justify-between py-3 border-b border-border">
+                    <span className="text-muted-foreground">Dauer</span>
+                    <span className="font-medium text-foreground">{priceDetails.hours} Stunden</span>
+                  </div>
+                )}
                 <div className="flex justify-between py-3 border-b border-border">
                   <span className="text-muted-foreground">Name</span>
                   <span className="font-medium text-foreground">{formData.name}</span>
@@ -554,11 +608,20 @@ export default function Buchen() {
                   <span className="text-muted-foreground">E-Mail</span>
                   <span className="font-medium text-foreground">{formData.email}</span>
                 </div>
-                <div className="flex justify-between py-3">
+                <div className="flex justify-between py-3 border-b border-border">
                   <span className="text-muted-foreground">Preis</span>
-                  <span className="font-bold text-xl text-primary">
-                    {selectedPackage?.price ? `€${selectedPackage.price}` : '-'}
-                  </span>
+                  <div className="text-right">
+                    {priceDetails.hours > 0 && priceDetails.hourlyRate > 0 ? (
+                      <>
+                        <span className="text-sm text-muted-foreground block">
+                          €{priceDetails.basePrice} + ({priceDetails.hours}h × €{priceDetails.hourlyRate})
+                        </span>
+                        <span className="font-bold text-xl text-primary">€{priceDetails.total.toFixed(2)}</span>
+                      </>
+                    ) : (
+                      <span className="font-bold text-xl text-primary">€{priceDetails.total.toFixed(2)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

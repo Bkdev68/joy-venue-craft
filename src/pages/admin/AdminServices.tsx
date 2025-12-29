@@ -30,6 +30,8 @@ interface ServicePackage {
   name: string;
   description: string | null;
   price: number;
+  base_price: number | null;
+  hourly_rate: number | null;
   duration: string | null;
   features: unknown[];
   is_popular: boolean;
@@ -62,6 +64,8 @@ export default function AdminServices() {
     name: '',
     description: '',
     price: '',
+    base_price: '',
+    hourly_rate: '',
     duration: '',
     features: '',
     is_popular: false,
@@ -237,7 +241,9 @@ export default function AdminServices() {
         service_id: selectedServiceId,
         name: packageForm.name,
         description: packageForm.description || null,
-        price: parseFloat(packageForm.price),
+        price: parseFloat(packageForm.price) || 0,
+        base_price: parseFloat(packageForm.base_price) || 0,
+        hourly_rate: parseFloat(packageForm.hourly_rate) || 0,
         duration: packageForm.duration || null,
         features: packageForm.features.split('\n').filter(f => f.trim()),
         is_popular: packageForm.is_popular,
@@ -281,6 +287,8 @@ export default function AdminServices() {
       name: '',
       description: '',
       price: '',
+      base_price: '',
+      hourly_rate: '',
       duration: '',
       features: '',
       is_popular: false,
@@ -294,6 +302,8 @@ export default function AdminServices() {
       name: pkg.name,
       description: pkg.description || '',
       price: pkg.price.toString(),
+      base_price: pkg.base_price?.toString() || '',
+      hourly_rate: pkg.hourly_rate?.toString() || '',
       duration: pkg.duration || '',
       features: (pkg.features as string[]).join('\n'),
       is_popular: pkg.is_popular,
@@ -473,23 +483,45 @@ export default function AdminServices() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="pkg_price">Preis (€)</Label>
+                <Label htmlFor="pkg_base_price">Grundpreis (€)</Label>
+                <Input
+                  id="pkg_base_price"
+                  type="number"
+                  value={packageForm.base_price}
+                  onChange={(e) => setPackageForm(prev => ({ ...prev, base_price: e.target.value }))}
+                  placeholder="z.B. 200"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pkg_hourly_rate">Stundenpreis (€)</Label>
+                <Input
+                  id="pkg_hourly_rate"
+                  type="number"
+                  value={packageForm.hourly_rate}
+                  onChange={(e) => setPackageForm(prev => ({ ...prev, hourly_rate: e.target.value }))}
+                  placeholder="z.B. 50"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pkg_duration">Dauer (Anzeige)</Label>
+                <Input
+                  id="pkg_duration"
+                  value={packageForm.duration}
+                  onChange={(e) => setPackageForm(prev => ({ ...prev, duration: e.target.value }))}
+                  placeholder="z.B. ab 2 Stunden"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pkg_price" className="text-muted-foreground">Legacy-Preis (€)</Label>
                 <Input
                   id="pkg_price"
                   type="number"
                   value={packageForm.price}
                   onChange={(e) => setPackageForm(prev => ({ ...prev, price: e.target.value }))}
-                  placeholder="z.B. 390"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pkg_duration">Dauer</Label>
-                <Input
-                  id="pkg_duration"
-                  value={packageForm.duration}
-                  onChange={(e) => setPackageForm(prev => ({ ...prev, duration: e.target.value }))}
-                  placeholder="z.B. 2 Stunden"
+                  placeholder="Alter Preis (optional)"
                 />
               </div>
             </div>
@@ -629,7 +661,10 @@ export default function AdminServices() {
                                 )}
                                 <span className="flex items-center gap-1">
                                   <Euro className="h-3 w-3" />
-                                  {pkg.price}
+                                  €{pkg.base_price || pkg.price}
+                                  {(pkg.hourly_rate ?? 0) > 0 && (
+                                    <span className="text-xs">+€{pkg.hourly_rate}/Std</span>
+                                  )}
                                 </span>
                               </div>
                               {(pkg.features as string[]).length > 0 && (

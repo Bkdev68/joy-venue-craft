@@ -151,10 +151,12 @@ export type Database = {
       }
       packages: {
         Row: {
+          base_price: number | null
           created_at: string
           description: string | null
           duration: string | null
           features: Json | null
+          hourly_rate: number | null
           id: string
           is_active: boolean | null
           is_popular: boolean | null
@@ -165,10 +167,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          base_price?: number | null
           created_at?: string
           description?: string | null
           duration?: string | null
           features?: Json | null
+          hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
           is_popular?: boolean | null
@@ -179,10 +183,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          base_price?: number | null
           created_at?: string
           description?: string | null
           duration?: string | null
           features?: Json | null
+          hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
           is_popular?: boolean | null
