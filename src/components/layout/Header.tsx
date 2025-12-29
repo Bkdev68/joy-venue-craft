@@ -4,7 +4,9 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import { useTheme } from "next-themes";
+import logoDark from "@/assets/logo.png";
+import logoLight from "@/assets/logo-light.svg";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,6 +20,9 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { resolvedTheme } = useTheme();
+  
+  const logo = resolvedTheme === "dark" ? logoLight : logoDark;
 
   useEffect(() => {
     const handleScroll = () => {
