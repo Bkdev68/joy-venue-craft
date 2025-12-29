@@ -1,31 +1,9 @@
 import { Section, SectionHeader } from "@/components/ui/section";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { useSiteContent } from "@/hooks/useSiteContent";
 import { cn } from "@/lib/utils";
 
-const benefits = [
-  {
-    title: "Professioneller Service",
-    description:
-      "Unser Team kümmert sich um alles – für einen stressfreien Abend.",
-  },
-  {
-    title: "Individuelle Layouts",
-    description:
-      "Personalisierte Designs passend zum Motto Ihres Events.",
-  },
-  {
-    title: "Sofortige Übermittlung",
-    description:
-      "Alle Fotos und Videos am selben Abend digital verfügbar.",
-  },
-  {
-    title: "Schneller Auf- und Abbau",
-    description:
-      "Wir kümmern uns um alles. Sie genießen Ihre Feier.",
-  },
-];
-
-function BenefitCard({ benefit, index }: { benefit: typeof benefits[0]; index: number }) {
+function BenefitCard({ title, description, index }: { title: string; description: string; index: number }) {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
@@ -41,27 +19,52 @@ function BenefitCard({ benefit, index }: { benefit: typeof benefits[0]; index: n
         0{index + 1}
       </span>
       <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">
-        {benefit.title}
+        {title}
       </h3>
       <p className="text-muted-foreground leading-relaxed">
-        {benefit.description}
+        {description}
       </p>
     </div>
   );
 }
 
 export function BenefitsSection() {
+  const { getContent } = useSiteContent();
+
+  const subtitle = getContent('benefits_section', 'subtitle', 'Vorteile');
+  const title = getContent('benefits_section', 'title', 'Das macht uns besonders');
+  const description = getContent('benefits_section', 'description', 'Exzellenter Service vor, während und nach Ihrer Feier.');
+
+  const benefits = [
+    {
+      title: getContent('benefits_section', 'benefit_1_title', 'Professioneller Service'),
+      description: getContent('benefits_section', 'benefit_1_description', 'Unser Team kümmert sich um alles – für einen stressfreien Abend.'),
+    },
+    {
+      title: getContent('benefits_section', 'benefit_2_title', 'Individuelle Layouts'),
+      description: getContent('benefits_section', 'benefit_2_description', 'Personalisierte Designs passend zum Motto Ihres Events.'),
+    },
+    {
+      title: getContent('benefits_section', 'benefit_3_title', 'Sofortige Übermittlung'),
+      description: getContent('benefits_section', 'benefit_3_description', 'Alle Fotos und Videos am selben Abend digital verfügbar.'),
+    },
+    {
+      title: getContent('benefits_section', 'benefit_4_title', 'Schneller Auf- und Abbau'),
+      description: getContent('benefits_section', 'benefit_4_description', 'Wir kümmern uns um alles. Sie genießen Ihre Feier.'),
+    },
+  ];
+
   return (
     <Section variant="muted" id="vorteile">
       <SectionHeader
-        subtitle="Vorteile"
-        title="Das macht uns besonders"
-        description="Exzellenter Service vor, während und nach Ihrer Feier."
+        subtitle={subtitle}
+        title={title}
+        description={description}
       />
 
       <div className="grid sm:grid-cols-2 gap-6">
         {benefits.map((benefit, index) => (
-          <BenefitCard key={benefit.title} benefit={benefit} index={index} />
+          <BenefitCard key={index} title={benefit.title} description={benefit.description} index={index} />
         ))}
       </div>
     </Section>

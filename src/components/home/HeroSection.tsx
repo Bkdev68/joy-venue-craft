@@ -1,9 +1,27 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import heroImage from "@/assets/gallery/event-1.jpg";
+import { useSiteContent } from "@/hooks/useSiteContent";
+import heroImageFallback from "@/assets/gallery/event-1.jpg";
 
 export function HeroSection() {
+  const { getContent, loading } = useSiteContent();
+
+  const subtitle = getContent('hero', 'subtitle', 'Photobooth & 360° Video');
+  const titleLine1 = getContent('hero', 'title_line1', 'Unvergessliche');
+  const titleLine2 = getContent('hero', 'title_line2', 'Erinnerungen');
+  const description = getContent('hero', 'description', 'Professioneller Photobooth & 360° Video Service für Events, die in Erinnerung bleiben.');
+  const ctaPrimary = getContent('hero', 'cta_primary', 'Jetzt buchen');
+  const ctaSecondary = getContent('hero', 'cta_secondary', 'Galerie ansehen');
+  const heroImage = getContent('hero', 'image', '') || heroImageFallback;
+  
+  const stat1Value = getContent('stats', 'stat1_value', '500+');
+  const stat1Label = getContent('stats', 'stat1_label', 'Events');
+  const stat2Value = getContent('stats', 'stat2_value', '100%');
+  const stat2Label = getContent('stats', 'stat2_label', 'Zufriedenheit');
+  const stat3Value = getContent('stats', 'stat3_value', 'Wien');
+  const stat3Label = getContent('stats', 'stat3_label', '& Umgebung');
+
   return (
     <section className="relative min-h-[100svh] flex flex-col items-center justify-center pt-24 pb-16 overflow-hidden">
       {/* Subtle gradient background */}
@@ -13,30 +31,30 @@ export function HeroSection() {
         {/* Headline */}
         <div className="mb-6 opacity-0 animate-fade-in">
           <span className="inline-block text-primary font-medium text-sm tracking-wide">
-            Photobooth & 360° Video
+            {subtitle}
           </span>
         </div>
         
         <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground leading-[1.05] tracking-tight mb-6 opacity-0 animate-fade-in-up animation-delay-100">
-          Unvergessliche
+          {titleLine1}
           <br />
-          <span className="text-gradient">Erinnerungen</span>
+          <span className="text-gradient">{titleLine2}</span>
         </h1>
         
         <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed mb-10 max-w-2xl mx-auto opacity-0 animate-fade-in-up animation-delay-200">
-          Professioneller Photobooth & 360° Video Service für Events, die in Erinnerung bleiben.
+          {description}
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center opacity-0 animate-fade-in-up animation-delay-300">
           <Button asChild size="lg" className="text-base px-8 h-14 rounded-full shadow-gold">
             <Link to="/buchen">
-              Jetzt buchen
+              {ctaPrimary}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
           <Button asChild variant="ghost" size="lg" className="text-base px-8 h-14 rounded-full">
             <Link to="/galerie">
-              Galerie ansehen
+              {ctaSecondary}
             </Link>
           </Button>
         </div>
@@ -59,16 +77,16 @@ export function HeroSection() {
       <div className="w-full max-w-4xl mx-auto mt-20 px-6 opacity-0 animate-fade-in animation-delay-500">
         <div className="grid grid-cols-3 gap-8 text-center">
           <div>
-            <p className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight">500+</p>
-            <p className="text-sm sm:text-base text-muted-foreground mt-2">Events</p>
+            <p className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight">{stat1Value}</p>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">{stat1Label}</p>
           </div>
           <div>
-            <p className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight">100%</p>
-            <p className="text-sm sm:text-base text-muted-foreground mt-2">Zufriedenheit</p>
+            <p className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight">{stat2Value}</p>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">{stat2Label}</p>
           </div>
           <div>
-            <p className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight">Wien</p>
-            <p className="text-sm sm:text-base text-muted-foreground mt-2">& Umgebung</p>
+            <p className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight">{stat3Value}</p>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">{stat3Label}</p>
           </div>
         </div>
       </div>
