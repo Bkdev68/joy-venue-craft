@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Section } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ArrowRight, Check, Calendar as CalendarIcon, Package, User, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const services = [
   { id: "photobooth", name: "Photo Booth", price: "Ab €390" },
@@ -46,6 +47,7 @@ export default function Buchen() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     date: undefined as Date | undefined,
@@ -58,6 +60,22 @@ export default function Buchen() {
     message: "",
   });
 
+  useEffect(() => {
+    const fetchAdminEmail = async () => {
+      const { data } = await supabase
+        .from('site_content')
+        .select('text_value')
+        .eq('section', 'settings')
+        .eq('key', 'booking_email')
+        .single();
+      
+      if (data?.text_value) {
+        setAdminEmail(data.text_value);
+      }
+    };
+    fetchAdminEmail();
+  }, []);
+
   const handleNext = () => {
     if (step < 4) setStep(step + 1);
   };
@@ -68,15 +86,50 @@ export default function Buchen() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
     
-    toast({
-      title: "Buchungsanfrage gesendet!",
-      description: "Wir melden uns innerhalb von 24 Stunden bei Ihnen.",
-    });
-    
-    setIsSubmitting(false);
-    setStep(5); // Success step
+    try {
+      const selectedService = services.find(s => s.id === formData.service);
+      const selectedPkg = packages[formData.service as keyof typeof packages]?.find(p => p.id === formData.package);
+      
+      const { error } = await supabase.functions.invoke('send-booking-email', {
+        body: {
+          date: formData.date?.toLocaleDateString("de-AT", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          eventType: formData.eventType,
+          service: selectedService?.name || formData.service,
+          packageName: selectedPkg?.name || formData.package,
+          packageDuration: selectedPkg?.duration || '',
+          packagePrice: selectedPkg?.price || '',
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          message: formData.message || undefined,
+          adminEmail: adminEmail || undefined,
+        },
+      });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Buchungsanfrage gesendet!",
+        description: "Wir melden uns innerhalb von 24 Stunden bei Ihnen.",
+      });
+      
+      setStep(5);
+    } catch (error) {
+      console.error('Error sending booking:', error);
+      toast({
+        title: "Fehler beim Senden",
+        description: "Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canProceed = () => {
