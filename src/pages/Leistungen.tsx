@@ -3,6 +3,7 @@ import { Section, SectionHeader } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Camera, Video, Mic, Sparkles, Users, Zap } from "lucide-react";
+import { SEO } from "@/components/SEO";
 import event2 from "@/assets/gallery/event-2.jpg";
 import event3 from "@/assets/gallery/event-3.jpg";
 import event4 from "@/assets/gallery/event-4.jpg";
@@ -79,6 +80,12 @@ const benefits = [
 export default function Leistungen() {
   return (
     <Layout>
+      <SEO 
+        title="Leistungen"
+        description="Photo Booth, 360° Video Booth und Audio Gästebuch für Ihr Event. Professionelles Equipment, erfahrene Betreuung, sofortige Ergebnisse. Jetzt informieren!"
+        keywords="Photo Booth Service, 360 Video Booth, Audio Gästebuch, Event Entertainment, Hochzeit Fotobox"
+        url="https://pixelpalast.at/leistungen"
+      />
       {/* Hero */}
       <section className="relative pt-32 pb-16 bg-gradient-subtle">
         <div className="container">

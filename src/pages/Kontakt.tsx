@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export default function Kontakt() {
   const { toast } = useToast();
@@ -30,6 +31,12 @@ export default function Kontakt() {
 
   return (
     <Layout>
+      <SEO 
+        title="Kontakt"
+        description="Kontaktieren Sie Pixelpalast für Ihre Buchung. Telefon: +43 660 2545493, E-Mail: office@pixelpalast.at. Wir beraten Sie gerne!"
+        keywords="Pixelpalast Kontakt, Photo Booth buchen, Fotobox anfragen, Wien"
+        url="https://pixelpalast.at/kontakt"
+      />
       {/* Hero */}
       <section className="relative pt-32 pb-16 bg-gradient-subtle">
         <div className="container">
