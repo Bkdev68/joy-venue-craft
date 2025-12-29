@@ -1,21 +1,30 @@
 import { Section, SectionHeader } from "@/components/ui/section";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { useSiteContent } from "@/hooks/useSiteContent";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import event1 from "@/assets/gallery/event-1.jpg";
 import event2 from "@/assets/gallery/event-2.jpg";
 import event3 from "@/assets/gallery/event-3.jpg";
 import event4 from "@/assets/gallery/event-4.jpg";
 import event5 from "@/assets/gallery/event-5.jpg";
 
-const galleryImages = [
-  { src: event1, alt: "Gäste beim Photobooth Event" },
-  { src: event2, alt: "360° Video Booth in Aktion" },
-  { src: event3, alt: "Elegante Eventfotografie" },
-  { src: event4, alt: "Hochzeits-Photobooth" },
-  { src: event5, alt: "Photobooth Ergebnisse" },
+interface GalleryImage {
+  id: string;
+  src: string;
+  alt: string;
+}
+
+const fallbackImages = [
+  { id: '1', src: event1, alt: "Gäste beim Photobooth Event" },
+  { id: '2', src: event2, alt: "360° Video Booth in Aktion" },
+  { id: '3', src: event3, alt: "Elegante Eventfotografie" },
+  { id: '4', src: event4, alt: "Hochzeits-Photobooth" },
+  { id: '5', src: event5, alt: "Photobooth Ergebnisse" },
 ];
 
-function GalleryImage({ image, index }: { image: typeof galleryImages[0]; index: number }) {
+function GalleryImage({ image, index }: { image: GalleryImage; index: number }) {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
@@ -39,17 +48,43 @@ function GalleryImage({ image, index }: { image: typeof galleryImages[0]; index:
 }
 
 export function GalleryPreviewSection() {
+  const { getContent } = useSiteContent();
+  const [images, setImages] = useState<GalleryImage[]>([]);
+
+  const subtitle = getContent('gallery_section', 'subtitle', 'Galerie');
+  const title = getContent('gallery_section', 'title', 'Eindrücke aus Events');
+  const description = getContent('gallery_section', 'description', 'Entdecken Sie, wie wir besondere Momente festhalten.');
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      const { data, error } = await supabase
+        .from('gallery_images')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order')
+        .limit(5);
+
+      if (!error && data && data.length > 0) {
+        setImages(data);
+      }
+    };
+
+    fetchImages();
+  }, []);
+
+  const displayImages = images.length > 0 ? images : fallbackImages;
+
   return (
     <Section variant="muted" id="galerie-preview">
       <SectionHeader
-        subtitle="Galerie"
-        title="Eindrücke aus Events"
-        description="Entdecken Sie, wie wir besondere Momente festhalten."
+        subtitle={subtitle}
+        title={title}
+        description={description}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-        {galleryImages.map((image, index) => (
-          <GalleryImage key={index} image={image} index={index} />
+        {displayImages.map((image, index) => (
+          <GalleryImage key={image.id} image={image} index={index} />
         ))}
       </div>
     </Section>

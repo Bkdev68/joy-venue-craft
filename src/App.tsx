@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { SiteContentProvider } from "@/hooks/useSiteContent";
 import Index from "./pages/Index";
 import Leistungen from "./pages/Leistungen";
 import Photobooth from "./pages/services/Photobooth";
@@ -26,41 +27,44 @@ import AdminTestimonials from "./pages/admin/AdminTestimonials";
 import AdminFAQ from "./pages/admin/AdminFAQ";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/leistungen" element={<Leistungen />} />
-            <Route path="/leistungen/photobooth" element={<Photobooth />} />
-            <Route path="/leistungen/360-video-booth" element={<VideoBooth360 />} />
-            <Route path="/leistungen/audio-gaestebuch" element={<AudioGuestbook />} />
-            <Route path="/galerie" element={<Galerie />} />
-            <Route path="/preise" element={<Preise />} />
-            <Route path="/kontakt" element={<Kontakt />} />
-            <Route path="/buchen" element={<Buchen />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/impressum" element={<Impressum />} />
-            <Route path="/datenschutz" element={<Datenschutz />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="galerie" element={<AdminGallery />} />
-              <Route path="services" element={<AdminServices />} />
-              <Route path="testimonials" element={<AdminTestimonials />} />
-              <Route path="faq" element={<AdminFAQ />} />
-              <Route path="inhalte" element={<AdminContent />} />
-              <Route path="einstellungen" element={<AdminSettings />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <SiteContentProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/leistungen" element={<Leistungen />} />
+              <Route path="/leistungen/photobooth" element={<Photobooth />} />
+              <Route path="/leistungen/360-video-booth" element={<VideoBooth360 />} />
+              <Route path="/leistungen/audio-gaestebuch" element={<AudioGuestbook />} />
+              <Route path="/galerie" element={<Galerie />} />
+              <Route path="/preise" element={<Preise />} />
+              <Route path="/kontakt" element={<Kontakt />} />
+              <Route path="/buchen" element={<Buchen />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/impressum" element={<Impressum />} />
+              <Route path="/datenschutz" element={<Datenschutz />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="galerie" element={<AdminGallery />} />
+                <Route path="services" element={<AdminServices />} />
+                <Route path="testimonials" element={<AdminTestimonials />} />
+                <Route path="faq" element={<AdminFAQ />} />
+                <Route path="inhalte" element={<AdminContent />} />
+                <Route path="einstellungen" element={<AdminSettings />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </SiteContentProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
