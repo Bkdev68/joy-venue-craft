@@ -2,3 +2,6 @@ project_id = "bnqynvzwshznmpjetjhz"
 
 [functions.create-admin]
 verify_jwt = false
+
+[functions.send-booking-email]
+verify_jwt = false
