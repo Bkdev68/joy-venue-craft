@@ -98,9 +98,14 @@
 
     --gold: 211 100% 55%;
     --gold-light: 211 30% 15%;
-    --cream: 0 0% 8%;
+    --cream: 0 0% 5%;
     --charcoal: 0 0% 98%;
     --slate: 0 0% 55%;
+
+    /* Dark mode gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(211 100% 60%), hsl(211 100% 50%));
+    --gradient-cream: linear-gradient(180deg, hsl(0 0% 5%), hsl(0 0% 0%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 0%), hsl(0 0% 5%));
 
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
