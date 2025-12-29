@@ -11,7 +11,11 @@ import {
   Package, 
   LogOut,
   Settings,
-  BarChart3
+  BarChart3,
+  Home,
+  Layers,
+  CreditCard,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
@@ -19,11 +23,18 @@ import logo from '@/assets/logo.png';
 const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/insights', icon: BarChart3, label: 'Insights' },
+  { type: 'divider', label: 'Seiten' },
+  { href: '/admin/seite/home', icon: Home, label: 'Home' },
+  { href: '/admin/seite/leistungen', icon: Layers, label: 'Leistungen' },
+  { href: '/admin/seite/preise', icon: CreditCard, label: 'Preise' },
+  { href: '/admin/seite/kontakt', icon: Mail, label: 'Kontakt' },
+  { type: 'divider', label: 'Inhalte' },
   { href: '/admin/galerie', icon: Image, label: 'Galerie' },
   { href: '/admin/services', icon: Package, label: 'Services' },
   { href: '/admin/testimonials', icon: Star, label: 'Testimonials' },
   { href: '/admin/faq', icon: HelpCircle, label: 'FAQ' },
-  { href: '/admin/inhalte', icon: FileText, label: 'Inhalte' },
+  { href: '/admin/inhalte', icon: FileText, label: 'Sonstige Inhalte' },
+  { type: 'divider', label: 'System' },
   { href: '/admin/einstellungen', icon: Settings, label: 'Einstellungen' },
 ];
 
@@ -73,13 +84,22 @@ export default function AdminLayout() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4">
-            {navItems.map((item) => {
+          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+            {navItems.map((item, index) => {
+              if (item.type === 'divider') {
+                return (
+                  <div key={index} className="pt-4 pb-2">
+                    <span className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              }
               const isActive = location.pathname === item.href;
               return (
                 <Link
                   key={item.href}
-                  to={item.href}
+                  to={item.href!}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive 
@@ -87,7 +107,7 @@ export default function AdminLayout() {
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  {item.icon && <item.icon className="h-4 w-4" />}
                   {item.label}
                 </Link>
               );
