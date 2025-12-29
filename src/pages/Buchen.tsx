@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ArrowRight, Check, Calendar as CalendarIcon, Package, User, Send, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { trackBookingStep, trackBookingComplete, trackBookingAbandonment } from "@/hooks/useAnalytics";
 
 interface Service {
   id: string;
@@ -117,13 +118,30 @@ export default function Buchen() {
     fetchData();
   }, []);
 
+  const stepNames = ['Datum & Event', 'Service & Paket', 'Kontaktdaten', 'Übersicht'];
+
   const handleNext = () => {
-    if (step < 4) setStep(step + 1);
+    if (step < 4) {
+      const nextStep = step + 1;
+      setStep(nextStep);
+      trackBookingStep(nextStep, stepNames[nextStep - 1], {
+        event_type: formData.eventType,
+        service: services.find(s => s.id === formData.service)?.title,
+      });
+    }
   };
 
   const handleBack = () => {
-    if (step > 1) setStep(step - 1);
+    if (step > 1) {
+      trackBookingAbandonment(step, stepNames[step - 1], services.find(s => s.id === formData.service)?.title);
+      setStep(step - 1);
+    }
   };
+
+  // Track initial step on mount
+  useEffect(() => {
+    trackBookingStep(1, 'Datum & Event');
+  }, []);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -166,6 +184,13 @@ export default function Buchen() {
       });
 
       if (error) throw error;
+      
+      // Track successful booking conversion
+      trackBookingComplete(
+        selectedService?.title || formData.service,
+        selectedPkg?.name || formData.package,
+        priceNum
+      );
       
       toast({
         title: "Buchungsanfrage gesendet!",

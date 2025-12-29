@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useSiteContent } from "@/hooks/useSiteContent";
 import { cn } from "@/lib/utils";
+import { trackCTA, trackContactClick } from "@/hooks/useAnalytics";
 
 export function CTASection() {
   const { ref, isVisible } = useScrollAnimation();
@@ -35,13 +36,24 @@ export function CTASection() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button asChild size="lg" className="rounded-full px-8 h-14 shadow-gold text-base">
+          <Button 
+            asChild 
+            size="lg" 
+            className="rounded-full px-8 h-14 shadow-gold text-base"
+            onClick={() => trackCTA('Jetzt buchen', 'cta_section')}
+          >
             <Link to="/buchen">
               {buttonText}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-14 text-base">
+          <Button 
+            asChild 
+            variant="ghost" 
+            size="lg" 
+            className="rounded-full px-8 h-14 text-base"
+            onClick={() => trackContactClick('phone')}
+          >
             <a href={`tel:${phone.replace(/\s/g, '')}`}>
               {phone}
             </a>

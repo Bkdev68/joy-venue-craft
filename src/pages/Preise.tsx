@@ -9,6 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { SEO, FAQSchema } from "@/components/SEO";
 
 const photoboothPackages = [
   {
@@ -138,6 +139,13 @@ const faqs = [
 export default function Preise() {
   return (
     <Layout>
+      <SEO 
+        title="Preise & Pakete"
+        description="Transparente Preise für Photo Booth, 360° Video Booth und Audio Gästebuch. Ab €290. Alle Pakete inkl. Auf-/Abbau und Betreuung. Jetzt Angebot anfordern!"
+        keywords="Photo Booth Preise, Fotobox Kosten, 360 Video Booth mieten, Event Entertainment Preise"
+        url="https://pixelpalast.at/preise"
+      />
+      <FAQSchema faqs={faqs.map(f => ({ question: f.question, answer: f.answer }))} />
       {/* Hero */}
       <section className="relative pt-32 pb-16 bg-gradient-subtle">
         <div className="container">
