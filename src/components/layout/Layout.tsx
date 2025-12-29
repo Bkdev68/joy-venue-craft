@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { StickyCTA } from "./StickyCTA";
+import { ChatBot } from "@/components/chat/ChatBot";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 
 interface LayoutProps {
@@ -18,6 +19,7 @@ export function Layout({ children }: LayoutProps) {
       <main className="flex-1">{children}</main>
       <Footer />
       <StickyCTA />
+      <ChatBot />
     </div>
   );
 }
