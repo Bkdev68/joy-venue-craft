@@ -565,8 +565,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const pdfBytes = await generateInvoicePdf({ invoice, origin: req.headers.get("origin") });
+    // Normalize pdf-lib output to a standard Uint8Array<ArrayBuffer> so it matches Deno's BodyInit typing.
+    const pdfBody = new Uint8Array(pdfBytes);
 
-    return new Response(pdfBytes, {
+    return new Response(pdfBody, {
       status: 200,
       headers: {
         ...corsHeaders,
