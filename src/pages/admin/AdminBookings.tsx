@@ -207,15 +207,31 @@ export default function AdminBookings() {
   const generateInvoice = async (booking: Booking, existingInvoiceId?: string) => {
     setGeneratingInvoice(booking.id);
     try {
-      const { data, error, response } = await supabase.functions.invoke('generate-invoice-pdf', {
-        body: existingInvoiceId ? { invoiceId: existingInvoiceId } : { bookingId: booking.id },
+      // Use fetch directly to get the raw PDF blob response
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-invoice-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify(existingInvoiceId ? { invoiceId: existingInvoiceId } : { bookingId: booking.id }),
       });
 
-      if (error) throw error;
-      if (!(data instanceof Blob)) throw new Error('PDF konnte nicht geladen werden');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Fehler beim Generieren der Rechnung');
+      }
 
-      const invoiceNumber = response?.headers.get('x-invoice-number') || 'Rechnung';
-      const url = URL.createObjectURL(data);
+      const blob = await response.blob();
+      if (blob.type !== 'application/pdf') {
+        throw new Error('PDF konnte nicht geladen werden');
+      }
+
+      const invoiceNumber = response.headers.get('x-invoice-number') || 'Rechnung';
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `Rechnung_${invoiceNumber}.pdf`;
