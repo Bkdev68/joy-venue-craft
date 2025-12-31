@@ -235,14 +235,8 @@ async function generateInvoicePdf(args: {
     companyY -= 14;
   }
 
-  // Header divider
+  // Spacing below header
   y -= 60;
-  page.drawLine({
-    start: { x: margin, y },
-    end: { x: width - margin, y },
-    thickness: 2,
-    color: rgb(0, 0, 0),
-  });
 
   // Title
   y -= 48;
