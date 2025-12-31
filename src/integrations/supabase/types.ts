@@ -16,6 +16,13 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          billing_city: string | null
+          billing_company: string | null
+          billing_country: string | null
+          billing_name: string | null
+          billing_street: string | null
+          billing_vat_id: string | null
+          billing_zip: string | null
           created_at: string
           customer_email: string
           customer_name: string
@@ -33,6 +40,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_city?: string | null
+          billing_company?: string | null
+          billing_country?: string | null
+          billing_name?: string | null
+          billing_street?: string | null
+          billing_vat_id?: string | null
+          billing_zip?: string | null
           created_at?: string
           customer_email: string
           customer_name: string
@@ -50,6 +64,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_city?: string | null
+          billing_company?: string | null
+          billing_country?: string | null
+          billing_name?: string | null
+          billing_street?: string | null
+          billing_vat_id?: string | null
+          billing_zip?: string | null
           created_at?: string
           customer_email?: string
           customer_name?: string
@@ -256,6 +277,12 @@ export type Database = {
       }
       invoices: {
         Row: {
+          billing_city: string | null
+          billing_company: string | null
+          billing_country: string | null
+          billing_street: string | null
+          billing_vat_id: string | null
+          billing_zip: string | null
           booking_id: string | null
           created_at: string
           customer_address: string | null
@@ -289,6 +316,12 @@ export type Database = {
           vat_rate: number | null
         }
         Insert: {
+          billing_city?: string | null
+          billing_company?: string | null
+          billing_country?: string | null
+          billing_street?: string | null
+          billing_vat_id?: string | null
+          billing_zip?: string | null
           booking_id?: string | null
           created_at?: string
           customer_address?: string | null
@@ -322,6 +355,12 @@ export type Database = {
           vat_rate?: number | null
         }
         Update: {
+          billing_city?: string | null
+          billing_company?: string | null
+          billing_country?: string | null
+          billing_street?: string | null
+          billing_vat_id?: string | null
+          billing_zip?: string | null
           booking_id?: string | null
           created_at?: string
           customer_address?: string | null
