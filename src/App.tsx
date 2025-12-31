@@ -30,6 +30,7 @@ import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminInsights from "./pages/admin/AdminInsights";
 import AdminBookings from "./pages/admin/AdminBookings";
+import AdminBuchhaltung from "./pages/admin/AdminBuchhaltung";
 import AdminHome from "./pages/admin/AdminHome";
 import AdminLeistungen from "./pages/admin/AdminLeistungen";
 import AdminPreise from "./pages/admin/AdminPreise";
@@ -64,6 +65,7 @@ const App = () => (
                 <Route index element={<AdminDashboard />} />
                 <Route path="insights" element={<AdminInsights />} />
                 <Route path="buchungen" element={<AdminBookings />} />
+                <Route path="buchhaltung" element={<AdminBuchhaltung />} />
                 <Route path="galerie" element={<AdminGallery />} />
                 <Route path="services" element={<AdminServices />} />
                 <Route path="testimonials" element={<AdminTestimonials />} />
