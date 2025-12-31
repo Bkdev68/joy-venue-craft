@@ -105,6 +105,7 @@ export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateOpen, setDateOpen] = useState(false);
   const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
+  const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     date: undefined as Date | undefined,
@@ -264,6 +265,42 @@ export default function AdminBookings() {
     } catch (error: any) {
       console.error('Error auto-creating invoice:', error);
       return null;
+    }
+  };
+
+  // Send invoice via email
+  const sendInvoiceEmail = async (booking: Booking) => {
+    if (!booking.invoice?.id) {
+      toast.error('Keine Rechnung vorhanden. Bitte zuerst Rechnung erstellen.');
+      return;
+    }
+
+    setSendingInvoiceEmail(booking.id);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-invoice-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ invoiceId: booking.invoice.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Fehler beim Senden der E-Mail');
+      }
+
+      toast.success(`Rechnung wurde an ${booking.customer_email} gesendet`);
+    } catch (error: any) {
+      console.error('Error sending invoice email:', error);
+      toast.error('Fehler beim Senden der Rechnung: ' + (error.message || 'Unbekannter Fehler'));
+    } finally {
+      setSendingInvoiceEmail(null);
     }
   };
 
@@ -782,7 +819,7 @@ export default function AdminBookings() {
                         className="h-8 w-8" 
                         onClick={() => generateInvoice(booking, booking.invoice?.id)}
                         disabled={generatingInvoice === booking.id}
-                        title={booking.invoice ? 'Rechnung anzeigen' : 'Rechnung erstellen'}
+                        title={booking.invoice ? 'Rechnung herunterladen' : 'Rechnung erstellen'}
                       >
                         {generatingInvoice === booking.id ? (
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -790,6 +827,23 @@ export default function AdminBookings() {
                           <FileText className={`h-4 w-4 ${booking.invoice ? 'text-blue-600' : ''}`} />
                         )}
                       </Button>
+                      {/* Send invoice email button */}
+                      {booking.invoice && (
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8" 
+                          onClick={() => sendInvoiceEmail(booking)}
+                          disabled={sendingInvoiceEmail === booking.id}
+                          title="Rechnung per E-Mail senden"
+                        >
+                          {sendingInvoiceEmail === booking.id ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                          ) : (
+                            <Mail className="h-4 w-4 text-green-600" />
+                          )}
+                        </Button>
+                      )}
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleView(booking)}>
                         <Eye className="h-4 w-4" />
                       </Button>
