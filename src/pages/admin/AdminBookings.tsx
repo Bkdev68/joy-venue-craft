@@ -214,15 +214,29 @@ export default function AdminBookings() {
       });
 
       if (error) throw error;
+      if (!data || !data.html) throw new Error('Keine Rechnung generiert');
 
-      // Open print dialog with invoice HTML
-      const printWindow = window.open('', '_blank');
+      // Create a new window and write the HTML content
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
       if (printWindow) {
+        printWindow.document.open();
         printWindow.document.write(data.html);
         printWindow.document.close();
-        printWindow.onload = () => {
+        
+        // Wait for content to load then trigger print
+        setTimeout(() => {
+          printWindow.focus();
           printWindow.print();
-        };
+        }, 500);
+      } else {
+        // Fallback: download as HTML file
+        const blob = new Blob([data.html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Rechnung_${data.invoice?.invoice_number || 'neu'}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
       }
 
       // Refresh to show linked invoice
@@ -232,9 +246,23 @@ export default function AdminBookings() {
       }
     } catch (error: any) {
       console.error('Error generating invoice:', error);
-      toast.error('Fehler beim Erstellen der Rechnung: ' + error.message);
+      toast.error('Fehler beim Erstellen der Rechnung: ' + (error.message || 'Unbekannter Fehler'));
     } finally {
       setGeneratingInvoice(null);
+    }
+  };
+
+  // Auto-create invoice when status changes to confirmed
+  const createInvoiceForBooking = async (booking: Booking) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
+        body: { bookingId: booking.id }
+      });
+      if (error) throw error;
+      return data.invoice;
+    } catch (error: any) {
+      console.error('Error auto-creating invoice:', error);
+      return null;
     }
   };
 
@@ -309,13 +337,26 @@ export default function AdminBookings() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
+      const booking = bookings.find(b => b.id === id);
+      
       const { error } = await supabase
         .from('bookings')
         .update({ status })
         .eq('id', id);
 
       if (error) throw error;
-      toast.success('Status aktualisiert');
+      
+      // Auto-create invoice when status changes to confirmed and no invoice exists
+      if (status === 'confirmed' && booking && !booking.invoice) {
+        toast.success('Status aktualisiert - Rechnung wird erstellt...');
+        const invoice = await createInvoiceForBooking(booking);
+        if (invoice) {
+          toast.success(`Rechnung ${invoice.invoice_number} automatisch erstellt`);
+        }
+      } else {
+        toast.success('Status aktualisiert');
+      }
+      
       fetchData();
     } catch (error) {
       console.error('Error updating status:', error);
