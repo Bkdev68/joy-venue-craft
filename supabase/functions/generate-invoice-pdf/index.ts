@@ -1,383 +1,545 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Expose-Headers": "content-disposition, x-invoice-number",
 };
 
-interface InvoiceData {
-  invoiceNumber: string;
-  invoiceDate: string;
-  customerName: string;
-  customerEmail?: string;
-  billingCompany?: string;
-  billingStreet?: string;
-  billingZip?: string;
-  billingCity?: string;
-  billingCountry?: string;
-  billingVatId?: string;
-  serviceName: string;
+type InvoiceRow = {
+  id: string;
+  booking_id: string | null;
+  invoice_number: string;
+  invoice_date: string;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string | null;
   description: string;
-  netAmount: number;
-  kilometers: number;
-  kilometerRate: number;
-  kilometerAmount: number;
-  grossAmount: number;
-  depositAmount: number;
-  depositDueDate?: string;
-  remainingAmount: number;
+  service_name: string | null;
+  net_amount: number;
+  gross_amount: number;
+  vat_rate: number | null;
+  vat_amount: number | null;
+  kilometer_rate: number | null;
+  kilometers: number | null;
+  kilometer_amount: number | null;
+  deposit_amount: number | null;
+  deposit_due_date: string | null;
+  remaining_amount: number | null;
+  // Billing
+  billing_company: string | null;
+  billing_street: string | null;
+  billing_zip: string | null;
+  billing_city: string | null;
+  billing_country: string | null;
+  billing_vat_id: string | null;
+};
+
+interface GenerateInvoiceRequest {
+  invoiceId?: string;
+  bookingId?: string;
+  /** If true: only create/find the invoice row, return JSON, no PDF */
+  createOnly?: boolean;
 }
 
-// Pixelpalast Logo as base64 SVG
-const logoBase64 = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMTIwIDYwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHg9IjUiIHk9IjUiIHJ4PSI4IiBmaWxsPSIjMDAwIi8+Cjx0ZXh0IHg9IjMwIiB5PSIzOCIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UFA8L3RleHQ+Cjx0ZXh0IHg9IjY1IiB5PSIyNSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9IjMwMCIgZmlsbD0iIzAwMCIgbGV0dGVyLXNwYWNpbmc9IjEiPlBJWEVMPC90ZXh0Pgo8dGV4dCB4PSI2NSIgeT0iMzgiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSI2MDAiIGZpbGw9IiMwMDAiIGxldHRlci1zcGFjaW5nPSIxIj5QQUxBU1Q8L3RleHQ+Cjwvc3ZnPg==`;
+const formatCurrency = (amount: number) =>
+  amount.toLocaleString("de-AT", { style: "currency", currency: "EUR" });
 
-// Generate invoice HTML with professional PDF styling
-function generateInvoiceHTML(data: InvoiceData): string {
-  const formatCurrency = (amount: number) => 
-    amount.toLocaleString('de-AT', { style: 'currency', currency: 'EUR' });
-  
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const formatDate = (dateStr: string) => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
+const safeNum = (v: any, fallback = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+function wrapText(args: {
+  text: string;
+  font: any;
+  fontSize: number;
+  maxWidth: number;
+}): string[] {
+  const { text, font, fontSize, maxWidth } = args;
+  const words = (text || "").split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+
+  let current = "";
+  for (const w of words) {
+    const candidate = current ? `${current} ${w}` : w;
+    const width = font.widthOfTextAtSize(candidate, fontSize);
+    if (width <= maxWidth) {
+      current = candidate;
+    } else {
+      if (current) lines.push(current);
+      current = w;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : ["-"];
+}
+
+async function fetchLogoPngBytes(origin: string | null): Promise<Uint8Array | null> {
+  if (!origin) return null;
+  try {
+    const url = new URL("/pixelpalast-logo.png", origin);
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
+}
+
+async function createOrLoadInvoice(args: {
+  supabase: any;
+  invoiceId?: string;
+  bookingId?: string;
+}): Promise<InvoiceRow> {
+  const { supabase, invoiceId, bookingId } = args;
+
+  if (invoiceId) {
+    const { data: invoice, error } = await supabase.from("invoices").select("*").eq("id", invoiceId).single();
+    if (error) throw error;
+    return invoice as InvoiceRow;
+  }
+
+  if (!bookingId) throw new Error("Either invoiceId or bookingId is required");
+
+  const { data: booking, error: bookingError } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("id", bookingId)
+    .single();
+  if (bookingError) throw bookingError;
+
+  // Check if invoice already exists for this booking
+  const { data: existingInvoice } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+
+  if (existingInvoice) return existingInvoice as InvoiceRow;
+
+  // Generate invoice number
+  const { data: invoiceNumber, error: invoiceNumberError } = await supabase.rpc("generate_invoice_number");
+  if (invoiceNumberError) throw invoiceNumberError;
+
+  const grossAmount = safeNum(booking.package_price, 0);
+  const depositAmount = Math.round(grossAmount / 2);
+
+  const { data: newInvoice, error: insertError } = await supabase
+    .from("invoices")
+    .insert({
+      booking_id: bookingId,
+      invoice_number: invoiceNumber,
+      customer_name: booking.billing_name || booking.customer_name,
+      customer_email: booking.customer_email,
+      customer_phone: booking.customer_phone,
+      description: `${booking.package_name} - ${booking.event_type}`,
+      service_name: booking.service_name,
+      net_amount: grossAmount,
+      gross_amount: grossAmount,
+      kilometers: 0,
+      kilometer_rate: 1.0,
+      kilometer_amount: 0,
+      deposit_amount: depositAmount,
+      remaining_amount: grossAmount - depositAmount,
+      payment_status: "offen",
+      // Billing address from booking
+      billing_company: booking.billing_company || null,
+      billing_street: booking.billing_street || null,
+      billing_zip: booking.billing_zip || null,
+      billing_city: booking.billing_city || null,
+      billing_country: booking.billing_country || null,
+      billing_vat_id: booking.billing_vat_id || null,
+    })
+    .select()
+    .single();
+
+  if (insertError) throw insertError;
+  return newInvoice as InvoiceRow;
+}
+
+function buildRecipientLines(invoice: InvoiceRow): string[] {
+  const lines: string[] = [];
+  if (invoice.billing_company) lines.push(invoice.billing_company);
+  lines.push(invoice.customer_name);
+  if (invoice.billing_street) lines.push(invoice.billing_street);
+  if (invoice.billing_zip || invoice.billing_city) {
+    lines.push(`${invoice.billing_zip || ""} ${invoice.billing_city || ""}`.trim());
+  }
+  if (invoice.billing_country && invoice.billing_country !== "Österreich") {
+    lines.push(invoice.billing_country);
+  }
+  if (invoice.billing_vat_id) lines.push(`UID: ${invoice.billing_vat_id}`);
+  return lines.filter(Boolean);
+}
+
+async function generateInvoicePdf(args: {
+  invoice: InvoiceRow;
+  origin: string | null;
+}): Promise<Uint8Array> {
+  const { invoice, origin } = args;
+  const pdfDoc = await PDFDocument.create();
+
+  const page = pdfDoc.addPage([595.28, 841.89]); // A4
+  const { width, height } = page.getSize();
+
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const margin = 40;
+  let y = height - margin;
+
+  // Logo
+  const logoBytes = await fetchLogoPngBytes(origin);
+  if (logoBytes) {
+    try {
+      const logoImg = await pdfDoc.embedPng(logoBytes);
+      const dims = logoImg.scaleToFit(140, 46);
+      page.drawImage(logoImg, {
+        x: margin,
+        y: y - dims.height,
+        width: dims.width,
+        height: dims.height,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  // Company info (right)
+  const companyX = width - margin - 200;
+  const companyLines = [
+    { t: "Marcel Fischer", b: true },
+    { t: "Wildstraße 5" },
+    { t: "2100 Korneuburg" },
+    { t: "office@pixelpalast.at" },
+    { t: "+43 660 2545493" },
+  ];
+  let companyY = y - 12;
+  for (const line of companyLines) {
+    page.drawText(line.t, {
+      x: companyX,
+      y: companyY,
+      size: 10,
+      font: line.b ? fontBold : font,
+      color: rgb(0.15, 0.15, 0.15),
+    });
+    companyY -= 14;
+  }
+
+  // Header divider
+  y -= 60;
+  page.drawLine({
+    start: { x: margin, y },
+    end: { x: width - margin, y },
+    thickness: 2,
+    color: rgb(0, 0, 0),
+  });
+
+  // Title
+  y -= 48;
+  page.drawText("RECHNUNG", {
+    x: margin,
+    y,
+    size: 28,
+    font,
+    color: rgb(0, 0, 0),
+  });
+
+  // Recipient block (left)
+  y -= 36;
+  page.drawText("Empfänger", {
+    x: margin,
+    y,
+    size: 9,
+    font,
+    color: rgb(0.45, 0.45, 0.45),
+  });
+
+  const recipientLines = buildRecipientLines(invoice);
+  let rY = y - 16;
+  for (const line of recipientLines) {
+    page.drawText(line, {
+      x: margin,
+      y: rY,
+      size: 11,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    rY -= 14;
+  }
+  if (invoice.customer_email) {
+    page.drawText(invoice.customer_email, {
+      x: margin,
+      y: rY - 2,
+      size: 10,
+      font,
+      color: rgb(0.35, 0.35, 0.35),
+    });
+  }
+
+  // Invoice meta (right)
+  const metaX = width - margin - 220;
+  const metaYTop = y;
+  const metaItems = [
+    { k: "Rechnungs-Nr.:", v: invoice.invoice_number },
+    { k: "Datum:", v: formatDate(invoice.invoice_date || new Date().toISOString()) },
+  ];
+  let metaY = metaYTop;
+  for (const item of metaItems) {
+    page.drawText(item.k, {
+      x: metaX,
+      y: metaY,
+      size: 9,
+      font,
+      color: rgb(0.45, 0.45, 0.45),
+    });
+    page.drawText(item.v, {
+      x: metaX + 95,
+      y: metaY,
+      size: 10,
+      font: fontBold,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    metaY -= 14;
+  }
+
+  // Table
+  y = Math.min(rY - 40, metaYTop - 80);
+  const tableX = margin;
+  const tableW = width - margin * 2;
+  const colDesc = tableW * 0.62;
+  const colQty = tableW * 0.12;
+  const colAmt = tableW * 0.26;
+
+  // Header row
+  page.drawText("Beschreibung", { x: tableX, y, size: 9, font: fontBold });
+  page.drawText("Menge", { x: tableX + colDesc, y, size: 9, font: fontBold });
+  page.drawText("Betrag", {
+    x: tableX + colDesc + colQty,
+    y,
+    size: 9,
+    font: fontBold,
+  });
+  y -= 10;
+  page.drawLine({
+    start: { x: tableX, y },
+    end: { x: tableX + tableW, y },
+    thickness: 2,
+    color: rgb(0, 0, 0),
+  });
+  y -= 18;
+
+  const items: Array<{ title: string; desc: string; qtyLabel: string; amount: number }> = [];
+  items.push({
+    title: invoice.service_name || "Dienstleistung",
+    desc: invoice.description,
+    qtyLabel: "1",
+    amount: safeNum(invoice.net_amount),
+  });
+
+  const km = safeNum(invoice.kilometers);
+  const kmAmount = safeNum(invoice.kilometer_amount);
+  const kmRate = safeNum(invoice.kilometer_rate, 1);
+  if (km > 0 && kmAmount > 0) {
+    items.push({
+      title: "Kilometergeld",
+      desc: `${km} km × ${formatCurrency(kmRate)}/km`,
+      qtyLabel: String(km),
+      amount: kmAmount,
+    });
+  }
+
+  const rowGap = 10;
+  for (const item of items) {
+    const titleSize = 11;
+    const descSize = 9;
+
+    page.drawText(item.title, {
+      x: tableX,
+      y,
+      size: titleSize,
+      font: fontBold,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    const wrapped = wrapText({
+      text: item.desc || "",
+      font,
+      fontSize: descSize,
+      maxWidth: colDesc - 4,
+    });
+    let dy = y - 14;
+    for (const line of wrapped.slice(0, 4)) {
+      page.drawText(line, {
+        x: tableX,
+        y: dy,
+        size: descSize,
+        font,
+        color: rgb(0.35, 0.35, 0.35),
+      });
+      dy -= 12;
+    }
+
+    page.drawText(item.qtyLabel, {
+      x: tableX + colDesc,
+      y,
+      size: 11,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    const amtText = formatCurrency(item.amount);
+    page.drawText(amtText, {
+      x: tableX + colDesc + colQty,
+      y,
+      size: 11,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    const rowHeight = 14 + wrapped.slice(0, 4).length * 12 + rowGap;
+    y -= rowHeight;
+
+    page.drawLine({
+      start: { x: tableX, y: y + 6 },
+      end: { x: tableX + tableW, y: y + 6 },
+      thickness: 1,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+    y -= 10;
+  }
+
+  // Totals (right)
+  const subtotal = safeNum(invoice.net_amount) + kmAmount;
+  const taxes = 0;
+  const total = safeNum(invoice.gross_amount, subtotal);
+
+  const totalsW = 240;
+  const totalsX = width - margin - totalsW;
+  const totalsY = y - 10;
+
+  page.drawRectangle({
+    x: totalsX,
+    y: totalsY - 70,
+    width: totalsW,
+    height: 80,
+    borderWidth: 1,
+    borderColor: rgb(0.9, 0.9, 0.9),
+    color: rgb(0.98, 0.98, 0.98),
+  });
+
+  const tLabelX = totalsX + 12;
+  const tValueX = totalsX + totalsW - 12;
+  let tY = totalsY;
+  const drawTotalLine = (label: string, value: string, bold = false) => {
+    page.drawText(label, {
+      x: tLabelX,
+      y: tY,
+      size: 10,
+      font: bold ? fontBold : font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    const textWidth = (bold ? fontBold : font).widthOfTextAtSize(value, 10);
+    page.drawText(value, {
+      x: tValueX - textWidth,
+      y: tY,
+      size: 10,
+      font: bold ? fontBold : font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    tY -= 14;
   };
 
-  // Build customer address block
-  const customerAddressLines: string[] = [];
-  if (data.billingCompany) customerAddressLines.push(`<strong>${data.billingCompany}</strong>`);
-  customerAddressLines.push(data.customerName);
-  if (data.billingStreet) customerAddressLines.push(data.billingStreet);
-  if (data.billingZip || data.billingCity) {
-    customerAddressLines.push(`${data.billingZip || ''} ${data.billingCity || ''}`.trim());
+  drawTotalLine("Betrag", formatCurrency(subtotal));
+  drawTotalLine("Steuern", formatCurrency(taxes));
+  page.drawLine({
+    start: { x: totalsX + 12, y: tY + 6 },
+    end: { x: totalsX + totalsW - 12, y: tY + 6 },
+    thickness: 2,
+    color: rgb(0, 0, 0),
+  });
+  tY -= 8;
+  drawTotalLine("Summe", formatCurrency(total), true);
+
+  // Payment terms
+  y = totalsY - 110;
+  const deposit = safeNum(invoice.deposit_amount);
+  const remaining = safeNum(invoice.remaining_amount, Math.max(0, total - deposit));
+
+  if (deposit > 0) {
+    page.drawText("Zahlungsbedingungen", {
+      x: margin,
+      y,
+      size: 10,
+      font: fontBold,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    y -= 16;
+
+    const depText = `Der erste Teilbetrag von ${formatCurrency(deposit)}${invoice.deposit_due_date ? ` ist bis zum ${formatDate(invoice.deposit_due_date)} zu überweisen.` : " ist zu überweisen."}`;
+    const remText = `Die ausstehende Restzahlung von ${formatCurrency(remaining)} nach Absolvierung der Veranstaltung.`;
+
+    for (const line of wrapText({ text: depText, font, fontSize: 10, maxWidth: tableW })) {
+      page.drawText(line, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+      y -= 12;
+    }
+    y -= 4;
+    for (const line of wrapText({ text: remText, font, fontSize: 10, maxWidth: tableW })) {
+      page.drawText(line, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+      y -= 12;
+    }
   }
-  if (data.billingCountry && data.billingCountry !== 'Österreich') {
-    customerAddressLines.push(data.billingCountry);
+
+  // Kleinunternehmer
+  y -= 14;
+  const kleinText =
+    "Der Rechnungsbetrag enthält gem. § 6 Abs. 1 Z 27 UStG 1994 keine Umsatzsteuer – Skonto Abzug nicht möglich.";
+  for (const line of wrapText({ text: kleinText, font, fontSize: 9, maxWidth: tableW })) {
+    page.drawText(line, { x: margin, y, size: 9, font, color: rgb(0.35, 0.35, 0.35) });
+    y -= 11;
   }
-  if (data.billingVatId) customerAddressLines.push(`UID: ${data.billingVatId}`);
 
-  return `
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <title>Rechnung ${data.invoiceNumber}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 15mm 20mm;
-    }
-    @media print {
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .no-print { display: none !important; }
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-      font-size: 10pt; 
-      color: #1a1a1a; 
-      line-height: 1.5; 
-      padding: 0;
-      background: white;
-    }
-    .invoice-container {
-      max-width: 210mm;
-      margin: 0 auto;
-      padding: 15mm 20mm;
-      background: white;
-    }
-    .header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: flex-start;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #000;
-    }
-    .logo-section {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    .logo-section img {
-      height: 50px;
-      width: auto;
-    }
-    .company-info { 
-      text-align: right; 
-      font-size: 9pt; 
-      color: #555;
-      line-height: 1.6;
-    }
-    h1 { 
-      font-size: 32pt; 
-      font-weight: 300; 
-      letter-spacing: 3px; 
-      margin: 25px 0;
-      text-transform: uppercase;
-      color: #000;
-    }
-    .invoice-meta { 
-      display: flex; 
-      justify-content: space-between; 
-      margin-bottom: 30px;
-      gap: 40px;
-    }
-    .customer { 
-      flex: 1;
-    }
-    .customer-label { 
-      font-size: 8pt; 
-      color: #888; 
-      text-transform: uppercase; 
-      letter-spacing: 1px; 
-      margin-bottom: 8px;
-    }
-    .customer-address {
-      font-size: 10pt;
-      line-height: 1.6;
-    }
-    .invoice-details { 
-      text-align: right;
-    }
-    .invoice-details table { 
-      margin-left: auto; 
-    }
-    .invoice-details td { 
-      padding: 4px 0; 
-    }
-    .invoice-details td:first-child { 
-      color: #888; 
-      padding-right: 20px; 
-      text-transform: uppercase; 
-      font-size: 8pt; 
-      letter-spacing: 1px; 
-    }
-    .invoice-details td:last-child {
-      font-weight: 500;
-    }
-    .items-table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 25px 0; 
-    }
-    .items-table th { 
-      text-align: left; 
-      padding: 12px 0; 
-      border-bottom: 2px solid #000; 
-      text-transform: uppercase; 
-      font-size: 8pt; 
-      letter-spacing: 1px;
-      font-weight: 600;
-    }
-    .items-table th:nth-child(2) { text-align: center; }
-    .items-table th:last-child { text-align: right; }
-    .items-table td { 
-      padding: 15px 0; 
-      border-bottom: 1px solid #e5e5e5;
-      vertical-align: top;
-    }
-    .items-table td:nth-child(2) { text-align: center; }
-    .items-table td:last-child { text-align: right; }
-    .item-title { font-weight: 500; }
-    .item-description { 
-      font-size: 9pt; 
-      color: #666; 
-      margin-top: 4px; 
-    }
-    .totals { 
-      margin-left: auto; 
-      width: 280px; 
-      margin-top: 20px; 
-    }
-    .totals table { width: 100%; }
-    .totals td { padding: 8px 0; }
-    .totals td:last-child { text-align: right; font-weight: 500; }
-    .totals .total-row { 
-      font-size: 14pt; 
-      font-weight: 700; 
-      border-top: 2px solid #000;
-      padding-top: 12px;
-    }
-    .totals .total-row td { padding-top: 12px; }
-    .payment-info { 
-      margin-top: 30px; 
-      padding: 20px; 
-      background: #f8f8f8; 
-      border-radius: 4px;
-      border-left: 4px solid #000;
-    }
-    .payment-info h3 { 
-      font-size: 9pt; 
-      text-transform: uppercase; 
-      letter-spacing: 1px; 
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-    .payment-info p { 
-      margin: 6px 0; 
-      font-size: 10pt; 
-    }
-    .kleinunternehmer { 
-      margin-top: 25px; 
-      font-size: 9pt; 
-      color: #666; 
-      font-style: italic;
-      padding: 15px;
-      background: #fafafa;
-      border-radius: 4px;
-    }
-    .footer { 
-      margin-top: 40px; 
-      padding-top: 20px; 
-      border-top: 2px solid #000; 
-      font-size: 9pt; 
-    }
-    .footer-grid {
-      display: flex;
-      justify-content: space-between;
-    }
-    .footer-col h4 {
-      font-size: 8pt;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-      color: #888;
-    }
-    .footer-col p {
-      margin: 3px 0;
-    }
-    .print-button {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 12px 24px;
-      background: #000;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-    .print-button:hover {
-      background: #333;
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="header">
-      <div class="logo-section">
-        <img src="${logoBase64}" alt="Pixelpalast Logo" />
-      </div>
-      <div class="company-info">
-        <p><strong>Marcel Fischer</strong></p>
-        <p>Wildstraße 5</p>
-        <p>2100 Korneuburg</p>
-        <p>E-Mail: office@pixelpalast.at</p>
-        <p>Telefon: +43 660 2545493</p>
-      </div>
-    </div>
+  // Footer line
+  const footerY = margin + 70;
+  page.drawLine({
+    start: { x: margin, y: footerY },
+    end: { x: width - margin, y: footerY },
+    thickness: 2,
+    color: rgb(0, 0, 0),
+  });
 
-    <h1>Rechnung</h1>
+  // Footer cols
+  const leftColX = margin;
+  const rightColX = width / 2 + 10;
+  let fy = footerY - 18;
 
-    <div class="invoice-meta">
-      <div class="customer">
-        <div class="customer-label">Empfänger</div>
-        <div class="customer-address">
-          ${customerAddressLines.join('<br>')}
-        </div>
-        ${data.customerEmail ? `<p style="margin-top: 8px; color: #666; font-size: 9pt;">${data.customerEmail}</p>` : ''}
-      </div>
-      <div class="invoice-details">
-        <table>
-          <tr><td>Rechnungs-Nr.:</td><td><strong>${data.invoiceNumber}</strong></td></tr>
-          <tr><td>Datum:</td><td>${formatDate(data.invoiceDate)}</td></tr>
-        </table>
-      </div>
-    </div>
+  page.drawText("Bankverbindung", { x: leftColX, y: fy, size: 9, font: fontBold, color: rgb(0.35, 0.35, 0.35) });
+  page.drawText("Kontakt", { x: rightColX, y: fy, size: 9, font: fontBold, color: rgb(0.35, 0.35, 0.35) });
+  fy -= 14;
 
-    <table class="items-table">
-      <thead>
-        <tr>
-          <th>Beschreibung</th>
-          <th>Menge</th>
-          <th>Betrag</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            <div class="item-title">${data.serviceName}</div>
-            <div class="item-description">${data.description}</div>
-          </td>
-          <td>1</td>
-          <td>${formatCurrency(data.netAmount)}</td>
-        </tr>
-        ${data.kilometers > 0 ? `
-        <tr>
-          <td>
-            <div class="item-title">Kilometergeld</div>
-            <div class="item-description">${data.kilometers} km × ${formatCurrency(data.kilometerRate)}/km</div>
-          </td>
-          <td>${data.kilometers}</td>
-          <td>${formatCurrency(data.kilometerAmount)}</td>
-        </tr>
-        ` : ''}
-      </tbody>
-    </table>
+  const bankLines = ["Kontoinhaber: Marcel Fischer", "IBAN: AT66 1200 0502 2002 1997"];
+  const contactLines = ["office@pixelpalast.at", "www.pixelpalast.at"];
 
-    <div class="totals">
-      <table>
-        <tr>
-          <td>Betrag</td>
-          <td>${formatCurrency(data.netAmount + data.kilometerAmount)}</td>
-        </tr>
-        <tr>
-          <td>Steuern</td>
-          <td>${formatCurrency(0)}</td>
-        </tr>
-        <tr class="total-row">
-          <td>Summe</td>
-          <td>${formatCurrency(data.grossAmount)}</td>
-        </tr>
-      </table>
-    </div>
+  for (let i = 0; i < Math.max(bankLines.length, contactLines.length); i++) {
+    if (bankLines[i]) {
+      page.drawText(bankLines[i], { x: leftColX, y: fy, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+    }
+    if (contactLines[i]) {
+      page.drawText(contactLines[i], { x: rightColX, y: fy, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+    }
+    fy -= 12;
+  }
 
-    ${data.depositAmount > 0 ? `
-    <div class="payment-info">
-      <h3>Zahlungsbedingungen</h3>
-      <p>Der erste Teilbetrag von <strong>${formatCurrency(data.depositAmount)}</strong>${data.depositDueDate ? ` ist bis zum ${formatDate(data.depositDueDate)}` : ''} zu überweisen.</p>
-      <p>Die ausstehende Restzahlung von <strong>${formatCurrency(data.remainingAmount)}</strong> nach Absolvierung der Veranstaltung.</p>
-    </div>
-    ` : ''}
-
-    <p class="kleinunternehmer">
-      Der Rechnungsbetrag enthält gem. § 6 Abs. 1 Z 27 UStG 1994 keine Umsatzsteuer – Skonto Abzug nicht möglich
-    </p>
-
-    <div class="footer">
-      <div class="footer-grid">
-        <div class="footer-col">
-          <h4>Bankverbindung</h4>
-          <p><strong>Kontoinhaber:</strong> Marcel Fischer</p>
-          <p><strong>IBAN:</strong> AT66 1200 0502 2002 1997</p>
-        </div>
-        <div class="footer-col">
-          <h4>Kontakt</h4>
-          <p>office@pixelpalast.at</p>
-          <p>www.pixelpalast.at</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <button class="print-button no-print" onclick="window.print()">
-    📄 Als PDF speichern
-  </button>
-</body>
-</html>
-  `;
+  return await pdfDoc.save();
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -390,136 +552,36 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { invoiceId, bookingId } = await req.json();
-    console.log("Generating invoice for:", { invoiceId, bookingId });
+    const { invoiceId, bookingId, createOnly }: GenerateInvoiceRequest = await req.json();
+    console.log("Generating invoice:", { invoiceId, bookingId, createOnly });
 
-    let invoiceData: any;
+    const invoice = await createOrLoadInvoice({ supabase, invoiceId, bookingId });
 
-    if (invoiceId) {
-      // Get existing invoice
-      const { data: invoice, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('id', invoiceId)
-        .single();
-
-      if (error) throw error;
-      invoiceData = invoice;
-    } else if (bookingId) {
-      // Create invoice from booking
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('id', bookingId)
-        .single();
-
-      if (bookingError) throw bookingError;
-      console.log("Found booking:", booking);
-
-      // Check if invoice already exists for this booking
-      const { data: existingInvoice } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('booking_id', bookingId)
-        .maybeSingle();
-
-      if (existingInvoice) {
-        console.log("Invoice already exists:", existingInvoice.invoice_number);
-        invoiceData = existingInvoice;
-      } else {
-        // Generate invoice number
-        const { data: invoiceNumber } = await supabase.rpc('generate_invoice_number');
-        console.log("Generated invoice number:", invoiceNumber);
-
-        const grossAmount = booking.package_price;
-        const depositAmount = Math.round(grossAmount / 2);
-
-        // Create invoice in database with billing info from booking
-        const { data: newInvoice, error: insertError } = await supabase
-          .from('invoices')
-          .insert({
-            booking_id: bookingId,
-            invoice_number: invoiceNumber,
-            customer_name: booking.billing_name || booking.customer_name,
-            customer_email: booking.customer_email,
-            description: `${booking.package_name} - ${booking.event_type}`,
-            service_name: booking.service_name,
-            net_amount: grossAmount,
-            gross_amount: grossAmount,
-            kilometers: 0,
-            kilometer_rate: 1.00,
-            kilometer_amount: 0,
-            deposit_amount: depositAmount,
-            remaining_amount: grossAmount - depositAmount,
-            payment_status: 'offen',
-            // Billing address from booking
-            billing_company: booking.billing_company || null,
-            billing_street: booking.billing_street || null,
-            billing_zip: booking.billing_zip || null,
-            billing_city: booking.billing_city || null,
-            billing_country: booking.billing_country || null,
-            billing_vat_id: booking.billing_vat_id || null,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error("Error creating invoice:", insertError);
-          throw insertError;
-        }
-        console.log("Created new invoice:", newInvoice.invoice_number);
-        invoiceData = newInvoice;
-      }
-    } else {
-      throw new Error('Either invoiceId or bookingId is required');
-    }
-
-    // Generate HTML
-    const html = generateInvoiceHTML({
-      invoiceNumber: invoiceData.invoice_number,
-      invoiceDate: invoiceData.invoice_date || new Date().toISOString(),
-      customerName: invoiceData.customer_name,
-      customerEmail: invoiceData.customer_email,
-      billingCompany: invoiceData.billing_company,
-      billingStreet: invoiceData.billing_street,
-      billingZip: invoiceData.billing_zip,
-      billingCity: invoiceData.billing_city,
-      billingCountry: invoiceData.billing_country,
-      billingVatId: invoiceData.billing_vat_id,
-      serviceName: invoiceData.service_name || 'Dienstleistung',
-      description: invoiceData.description,
-      netAmount: Number(invoiceData.net_amount),
-      kilometers: Number(invoiceData.kilometers) || 0,
-      kilometerRate: Number(invoiceData.kilometer_rate) || 1,
-      kilometerAmount: Number(invoiceData.kilometer_amount) || 0,
-      grossAmount: Number(invoiceData.gross_amount),
-      depositAmount: Number(invoiceData.deposit_amount) || 0,
-      depositDueDate: invoiceData.deposit_due_date,
-      remainingAmount: Number(invoiceData.remaining_amount) || 0,
-    });
-
-    console.log("Invoice HTML generated successfully");
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        html,
-        invoice: invoiceData
-      }),
-      {
+    if (createOnly) {
+      return new Response(JSON.stringify({ success: true, invoice }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+      });
+    }
+
+    const pdfBytes = await generateInvoicePdf({ invoice, origin: req.headers.get("origin") });
+
+    return new Response(pdfBytes, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/pdf",
+        "Cache-Control": "no-store",
+        "x-invoice-number": invoice.invoice_number,
+        "Content-Disposition": `attachment; filename="Rechnung_${invoice.invoice_number}.pdf"`,
+      },
+    });
   } catch (error: any) {
     console.error("Error generating invoice:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 
