@@ -1,6 +1,8 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useIdleTimeout } from './useIdleTimeout';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -79,10 +81,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
-  };
+  }, []);
+
+  // Auto-logout after 5 minutes of inactivity for admin users
+  const handleIdleTimeout = useCallback(() => {
+    if (isAdmin && user) {
+      toast.info('Sie wurden wegen Inaktivität abgemeldet.');
+      signOut();
+    }
+  }, [isAdmin, user, signOut]);
+
+  useIdleTimeout({
+    timeout: 5 * 60 * 1000, // 5 minutes
+    onIdle: handleIdleTimeout,
+    enabled: isAdmin && !!user,
+  });
 
   return (
     <AuthContext.Provider value={{ user, session, isAdmin, loading, signIn, signOut }}>
