@@ -203,50 +203,35 @@ export default function AdminBookings() {
     setDetailDialogOpen(true);
   };
 
-  // Generate and download invoice
+  // Generate and download invoice (PDF)
   const generateInvoice = async (booking: Booking, existingInvoiceId?: string) => {
     setGeneratingInvoice(booking.id);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
-        body: existingInvoiceId 
-          ? { invoiceId: existingInvoiceId }
-          : { bookingId: booking.id }
+      const { data, error, response } = await supabase.functions.invoke('generate-invoice-pdf', {
+        body: existingInvoiceId ? { invoiceId: existingInvoiceId } : { bookingId: booking.id },
       });
 
       if (error) throw error;
-      if (!data || !data.html) throw new Error('Keine Rechnung generiert');
+      if (!(data instanceof Blob)) throw new Error('PDF konnte nicht geladen werden');
 
-      // Create a new window and write the HTML content
-      const printWindow = window.open('', '_blank', 'width=800,height=600');
-      if (printWindow) {
-        printWindow.document.open();
-        printWindow.document.write(data.html);
-        printWindow.document.close();
-        
-        // Wait for content to load then trigger print
-        setTimeout(() => {
-          printWindow.focus();
-          printWindow.print();
-        }, 500);
-      } else {
-        // Fallback: download as HTML file
-        const blob = new Blob([data.html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Rechnung_${data.invoice?.invoice_number || 'neu'}.html`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      const invoiceNumber = response?.headers.get('x-invoice-number') || 'Rechnung';
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Rechnung_${invoiceNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
 
       // Refresh to show linked invoice
       if (!existingInvoiceId) {
-        toast.success('Rechnung erstellt');
+        toast.success('Rechnung als PDF erstellt');
         fetchData();
       }
     } catch (error: any) {
       console.error('Error generating invoice:', error);
-      toast.error('Fehler beim Erstellen der Rechnung: ' + (error.message || 'Unbekannter Fehler'));
+      toast.error('Fehler beim Erstellen der PDF-Rechnung: ' + (error.message || 'Unbekannter Fehler'));
     } finally {
       setGeneratingInvoice(null);
     }
@@ -256,15 +241,16 @@ export default function AdminBookings() {
   const createInvoiceForBooking = async (booking: Booking) => {
     try {
       const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
-        body: { bookingId: booking.id }
+        body: { bookingId: booking.id, createOnly: true },
       });
       if (error) throw error;
-      return data.invoice;
+      return (data as any)?.invoice ?? null;
     } catch (error: any) {
       console.error('Error auto-creating invoice:', error);
       return null;
     }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
