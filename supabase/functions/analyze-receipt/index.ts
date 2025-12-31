@@ -31,14 +31,26 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Nicht autorisiert' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+    if (!supabaseKey) {
+      throw new Error('Backend key is not configured');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // IMPORTANT: pass the JWT explicitly (global headers can be overwritten internally by the auth client)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
+      console.warn('Auth failed in analyze-receipt:', authError?.message);
       return new Response(
         JSON.stringify({ success: false, error: 'Nicht autorisiert' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

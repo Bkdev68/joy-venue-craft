@@ -399,8 +399,13 @@ export default function AdminBuchhaltung() {
       reader.readAsDataURL(file);
       const imageBase64 = await base64Promise;
 
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
       const token = sessionData?.session?.access_token;
+      if (!token) {
+        throw new Error('Nicht angemeldet – bitte neu einloggen.');
+      }
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-receipt`, {
         method: 'POST',
