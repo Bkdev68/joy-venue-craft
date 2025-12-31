@@ -514,7 +514,8 @@ const handler = async (req: Request): Promise<Response> => {
       `Ihre Rechnung ${invoice.invoice_number} von PixelPalast`,
       emailHtml,
       {
-        filename: `Rechnung_${invoice.invoice_number}.pdf`,
+        // Add a short id suffix to avoid mail clients caching an older attachment with the same filename
+        filename: `Rechnung_${invoice.invoice_number}_${String(invoice.id).slice(0, 6)}.pdf`,
         content: pdfBytes,
       }
     );
