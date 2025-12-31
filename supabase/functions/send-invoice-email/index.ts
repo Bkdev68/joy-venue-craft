@@ -271,9 +271,9 @@ const handler = async (req: Request): Promise<Response> => {
     const pdfBytes = await generateInvoicePdf(invoice as InvoiceRow);
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
 
-    // Send email with attachment
+    // Send email with attachment (using resend.dev until domain is verified)
     const emailResponse = await resend.emails.send({
-      from: "PixelPalast <office@pixelpalast.at>",
+      from: "PixelPalast <onboarding@resend.dev>",
       to: [invoice.customer_email],
       subject: `Ihre Rechnung ${invoice.invoice_number} von PixelPalast`,
       html: `

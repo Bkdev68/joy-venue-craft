@@ -106,6 +106,7 @@ export default function AdminBookings() {
   const [dateOpen, setDateOpen] = useState(false);
   const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
   const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState<string | null>(null);
+  const [emailPreviewBooking, setEmailPreviewBooking] = useState<Booking | null>(null);
 
   const [form, setForm] = useState({
     date: undefined as Date | undefined,
@@ -268,14 +269,23 @@ export default function AdminBookings() {
     }
   };
 
-  // Send invoice via email
-  const sendInvoiceEmail = async (booking: Booking) => {
+  // Open email preview dialog
+  const openEmailPreview = (booking: Booking) => {
     if (!booking.invoice?.id) {
       toast.error('Keine Rechnung vorhanden. Bitte zuerst Rechnung erstellen.');
       return;
     }
+    setEmailPreviewBooking(booking);
+  };
 
+  // Send invoice via email (called after confirmation)
+  const confirmSendInvoiceEmail = async () => {
+    if (!emailPreviewBooking?.invoice?.id) return;
+
+    const booking = emailPreviewBooking;
+    setEmailPreviewBooking(null);
     setSendingInvoiceEmail(booking.id);
+    
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -833,7 +843,7 @@ export default function AdminBookings() {
                           size="icon" 
                           variant="ghost" 
                           className="h-8 w-8" 
-                          onClick={() => sendInvoiceEmail(booking)}
+                          onClick={() => openEmailPreview(booking)}
                           disabled={sendingInvoiceEmail === booking.id}
                           title="Rechnung per E-Mail senden"
                         >
@@ -995,6 +1005,72 @@ export default function AdminBookings() {
                 </Button>
                 <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
                   Schließen
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Preview Dialog */}
+      <Dialog open={!!emailPreviewBooking} onOpenChange={(open) => !open && setEmailPreviewBooking(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Rechnung per E-Mail senden
+            </DialogTitle>
+          </DialogHeader>
+          {emailPreviewBooking && (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Bitte überprüfen Sie die Daten vor dem Versand:
+              </p>
+              
+              <div className="bg-muted p-4 rounded-lg space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Empfänger:</span>
+                  <span className="font-medium">{emailPreviewBooking.customer_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">E-Mail:</span>
+                  <span className="font-medium text-primary">{emailPreviewBooking.customer_email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Rechnungs-Nr.:</span>
+                  <span className="font-medium">{emailPreviewBooking.invoice?.invoice_number}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Betrag:</span>
+                  <span className="font-medium">€{emailPreviewBooking.invoice?.gross_amount?.toLocaleString('de-AT')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Datum:</span>
+                  <span className="font-medium">{emailPreviewBooking.invoice?.invoice_date ? format(new Date(emailPreviewBooking.invoice.invoice_date), 'dd.MM.yyyy') : '-'}</span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>E-Mail enthält:</strong> Professionelle Rechnung als PDF-Anhang mit allen Buchungsdetails und Zahlungsinformationen.
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  onClick={confirmSendInvoiceEmail} 
+                  className="flex-1"
+                  disabled={sendingInvoiceEmail === emailPreviewBooking.id}
+                >
+                  {sendingInvoiceEmail === emailPreviewBooking.id ? (
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Mail className="h-4 w-4 mr-2" />
+                  )}
+                  Jetzt senden
+                </Button>
+                <Button variant="outline" onClick={() => setEmailPreviewBooking(null)}>
+                  Abbrechen
                 </Button>
               </div>
             </div>
