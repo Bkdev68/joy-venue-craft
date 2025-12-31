@@ -286,18 +286,26 @@ const getSmtpClient = () => {
 const sendEmailWithAttachment = async (to: string, subject: string, html: string, attachment: { filename: string; content: Uint8Array }) => {
   const client = getSmtpClient();
   try {
+    // Encode PDF to base64 for attachment
+    const pdfBase64 = base64Encode(attachment.content.buffer as ArrayBuffer);
+    
     await client.send({
       from: "PixelPalast <buchung@pixelpalast.at>",
       to: to,
       subject: subject,
-      content: "auto",
-      html: html,
+      mimeContent: [
+        {
+          mimeType: "text/html; charset=utf-8",
+          content: html,
+          transferEncoding: "quoted-printable",
+        },
+      ],
       attachments: [
         {
           filename: attachment.filename,
-          content: attachment.content,
+          content: pdfBase64,
           contentType: "application/pdf",
-          encoding: "binary",
+          encoding: "base64",
         },
       ],
     });
