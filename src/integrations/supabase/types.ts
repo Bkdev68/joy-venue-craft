@@ -83,6 +83,111 @@ export type Database = {
           },
         ]
       }
+      expense_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string
+          expense_date: string
+          gross_amount: number
+          id: string
+          is_paid: boolean | null
+          net_amount: number
+          notes: string | null
+          paid_date: string | null
+          receipt_number: string | null
+          receipt_url: string | null
+          recurring_expense_id: string | null
+          updated_at: string
+          vat_amount: number | null
+          vat_rate: number | null
+          vendor: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description: string
+          expense_date?: string
+          gross_amount?: number
+          id?: string
+          is_paid?: boolean | null
+          net_amount?: number
+          notes?: string | null
+          paid_date?: string | null
+          receipt_number?: string | null
+          receipt_url?: string | null
+          recurring_expense_id?: string | null
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+          vendor: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          expense_date?: string
+          gross_amount?: number
+          id?: string
+          is_paid?: boolean | null
+          net_amount?: number
+          notes?: string | null
+          paid_date?: string | null
+          receipt_number?: string | null
+          receipt_url?: string | null
+          recurring_expense_id?: string | null
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+          vendor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_recurring_expense"
+            columns: ["recurring_expense_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faqs: {
         Row: {
           answer: string
@@ -149,6 +254,116 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_number: string | null
+          customer_phone: string | null
+          deposit_amount: number | null
+          deposit_due_date: string | null
+          deposit_paid: boolean | null
+          deposit_paid_date: string | null
+          description: string
+          due_date: string | null
+          gross_amount: number
+          id: string
+          invoice_date: string
+          invoice_number: string
+          kilometer_amount: number | null
+          kilometer_rate: number | null
+          kilometers: number | null
+          net_amount: number
+          notes: string | null
+          payment_status: string
+          pdf_url: string | null
+          remaining_amount: number | null
+          remaining_paid: boolean | null
+          remaining_paid_date: string | null
+          service_name: string | null
+          updated_at: string
+          vat_amount: number | null
+          vat_rate: number | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_number?: string | null
+          customer_phone?: string | null
+          deposit_amount?: number | null
+          deposit_due_date?: string | null
+          deposit_paid?: boolean | null
+          deposit_paid_date?: string | null
+          description: string
+          due_date?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          kilometer_amount?: number | null
+          kilometer_rate?: number | null
+          kilometers?: number | null
+          net_amount?: number
+          notes?: string | null
+          payment_status?: string
+          pdf_url?: string | null
+          remaining_amount?: number | null
+          remaining_paid?: boolean | null
+          remaining_paid_date?: string | null
+          service_name?: string | null
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_number?: string | null
+          customer_phone?: string | null
+          deposit_amount?: number | null
+          deposit_due_date?: string | null
+          deposit_paid?: boolean | null
+          deposit_paid_date?: string | null
+          description?: string
+          due_date?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          kilometer_amount?: number | null
+          kilometer_rate?: number | null
+          kilometers?: number | null
+          net_amount?: number
+          notes?: string | null
+          payment_status?: string
+          pdf_url?: string | null
+          remaining_amount?: number | null
+          remaining_paid?: boolean | null
+          remaining_paid_date?: string | null
+          service_name?: string | null
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packages: {
         Row: {
           base_price: number | null
@@ -204,6 +419,59 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_expenses: {
+        Row: {
+          amount: number
+          auto_create: boolean | null
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          interval: string
+          is_active: boolean | null
+          name: string
+          next_due_date: string
+          updated_at: string
+          vendor: string
+        }
+        Insert: {
+          amount?: number
+          auto_create?: boolean | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          interval?: string
+          is_active?: boolean | null
+          name: string
+          next_due_date: string
+          updated_at?: string
+          vendor: string
+        }
+        Update: {
+          amount?: number
+          auto_create?: boolean | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          interval?: string
+          is_active?: boolean | null
+          name?: string
+          next_due_date?: string
+          updated_at?: string
+          vendor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -354,6 +622,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_invoice_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
