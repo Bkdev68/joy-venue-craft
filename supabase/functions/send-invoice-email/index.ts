@@ -1,18 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
-
-// Helper to convert Uint8Array to base64
-function uint8ArrayToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -278,6 +268,49 @@ async function generateInvoicePdf(args: { invoice: InvoiceRow; origin: string | 
   return new Uint8Array(pdfBytes);
 }
 
+// SMTP configuration for Strato
+const getSmtpClient = () => {
+  return new SMTPClient({
+    connection: {
+      hostname: "smtp.strato.de",
+      port: 465,
+      tls: true,
+      auth: {
+        username: "buchung@pixelpalast.at",
+        password: Deno.env.get("STRATO_SMTP_PASSWORD") || "",
+      },
+    },
+  });
+};
+
+const sendEmailWithAttachment = async (to: string, subject: string, html: string, attachment: { filename: string; content: Uint8Array }) => {
+  const client = getSmtpClient();
+  try {
+    await client.send({
+      from: "PixelPalast <buchung@pixelpalast.at>",
+      to: to,
+      subject: subject,
+      content: "auto",
+      html: html,
+      attachments: [
+        {
+          filename: attachment.filename,
+          content: attachment.content,
+          contentType: "application/pdf",
+          encoding: "binary",
+        },
+      ],
+    });
+    console.log(`Email with attachment sent successfully to ${to}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to send email to ${to}:`, error);
+    throw error;
+  } finally {
+    await client.close();
+  }
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -316,62 +349,55 @@ const handler = async (req: Request): Promise<Response> => {
     const origin = req.headers.get("origin") ?? derivedOrigin;
 
     const pdfBytes = await generateInvoicePdf({ invoice: invoice as InvoiceRow, origin });
-    // Convert Uint8Array to base64 string
-    const pdfBase64 = uint8ArrayToBase64(pdfBytes);
 
-    // Send email with attachment (using resend.dev until domain is verified)
-    const emailResponse = await resend.emails.send({
-      from: "PixelPalast <onboarding@resend.dev>",
-      to: [invoice.customer_email],
-      subject: `Ihre Rechnung ${invoice.invoice_number} von PixelPalast`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #D4AF37;">Ihre Rechnung</h1>
-          
-          <p>Guten Tag ${invoice.customer_name},</p>
-          
-          <p>anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> für unsere Leistungen.</p>
-          
-          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; margin: 20px 0;">
-            <p><strong>Rechnungsnummer:</strong> ${invoice.invoice_number}</p>
-            <p><strong>Rechnungsdatum:</strong> ${formatDate(invoice.invoice_date)}</p>
-            <p><strong>Gesamtbetrag:</strong> <span style="color: #D4AF37; font-size: 18px;">${formatCurrency(safeNum(invoice.gross_amount))}</span></p>
-          </div>
-          
-          <p>Die Rechnung finden Sie im PDF-Anhang dieser E-Mail.</p>
-          
-          <p><strong>Zahlungsziel:</strong> 14 Tage nach Rechnungsdatum</p>
-          
-          <p style="margin-top: 30px;">
-            Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verfügung.
-          </p>
-          
-          <p>Mit freundlichen Grüßen,<br>
-          <strong>Ihr PixelPalast Team</strong></p>
-          
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-          
-          <p style="color: #999; font-size: 12px;">
-            PixelPalast - Photo Booth & 360° Video Booth<br>
-            Marcel Fischer | Wildstraße 5 | 2100 Korneuburg<br>
-            <a href="https://pixelpalast.at" style="color: #D4AF37;">www.pixelpalast.at</a>
-          </p>
+    // Email HTML
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #D4AF37;">Ihre Rechnung</h1>
+        
+        <p>Guten Tag ${invoice.customer_name},</p>
+        
+        <p>anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> für unsere Leistungen.</p>
+        
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <p><strong>Rechnungsnummer:</strong> ${invoice.invoice_number}</p>
+          <p><strong>Rechnungsdatum:</strong> ${formatDate(invoice.invoice_date)}</p>
+          <p><strong>Gesamtbetrag:</strong> <span style="color: #D4AF37; font-size: 18px;">${formatCurrency(safeNum(invoice.gross_amount))}</span></p>
         </div>
-      `,
-      attachments: [
-        {
-          filename: `Rechnung_${invoice.invoice_number}.pdf`,
-          content: pdfBase64,
-        },
-      ],
-    });
+        
+        <p>Die Rechnung finden Sie im PDF-Anhang dieser E-Mail.</p>
+        
+        <p><strong>Zahlungsziel:</strong> 14 Tage nach Rechnungsdatum</p>
+        
+        <p style="margin-top: 30px;">
+          Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verfügung.
+        </p>
+        
+        <p>Mit freundlichen Grüßen,<br>
+        <strong>Ihr PixelPalast Team</strong></p>
+        
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+        
+        <p style="color: #999; font-size: 12px;">
+          PixelPalast - Photo Booth & 360° Video Booth<br>
+          Marcel Fischer | Wildstraße 5 | 2100 Korneuburg<br>
+          <a href="https://pixelpalast.at" style="color: #D4AF37;">www.pixelpalast.at</a>
+        </p>
+      </div>
+    `;
 
-    if (emailResponse.error) {
-      console.error("Email error:", emailResponse.error);
-      throw new Error("E-Mail konnte nicht gesendet werden: " + emailResponse.error.message);
-    }
+    // Send email with PDF attachment via Strato SMTP
+    await sendEmailWithAttachment(
+      invoice.customer_email,
+      `Ihre Rechnung ${invoice.invoice_number} von PixelPalast`,
+      emailHtml,
+      {
+        filename: `Rechnung_${invoice.invoice_number}.pdf`,
+        content: pdfBytes,
+      }
+    );
 
-    console.log("Invoice email sent successfully:", emailResponse);
+    console.log("Invoice email sent successfully");
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
