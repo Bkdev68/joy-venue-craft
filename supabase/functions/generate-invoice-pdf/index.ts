@@ -84,16 +84,19 @@ function wrapText(args: {
 
 async function fetchLogoPngBytes(origin: string | null): Promise<Uint8Array | null> {
   const candidates = [origin, "https://pixelpalast.at", "https://www.pixelpalast.at"].filter(Boolean) as string[];
+  const paths = ["/pixelpalast-logo-invoice.png", "/pixelpalast-logo.png"];
 
   for (const base of candidates) {
-    try {
-      const url = new URL("/pixelpalast-logo.png", base);
-      const res = await fetch(url.toString());
-      if (!res.ok) continue;
-      const buf = await res.arrayBuffer();
-      return new Uint8Array(buf);
-    } catch {
-      // try next candidate
+    for (const path of paths) {
+      try {
+        const url = new URL(path, base);
+        const res = await fetch(url.toString());
+        if (!res.ok) continue;
+        const buf = await res.arrayBuffer();
+        return new Uint8Array(buf);
+      } catch {
+        // try next path / candidate
+      }
     }
   }
 
