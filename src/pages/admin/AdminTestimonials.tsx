@@ -156,23 +156,24 @@ export default function AdminTestimonials() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Testimonials</h1>
-          <p className="text-muted-foreground mt-1">Verwalten Sie Kundenbewertungen</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Testimonials</h1>
+          <p className="text-muted-foreground text-sm mt-1">Verwalten Sie Kundenbewertungen</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button size="sm" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Testimonial hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="mx-4">
             <DialogHeader>
               <DialogTitle>{editingTestimonial ? 'Bearbeiten' : 'Neues Testimonial'}</DialogTitle>
             </DialogHeader>
@@ -187,7 +188,7 @@ export default function AdminTestimonials() {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="role">Rolle</Label>
                   <Input
@@ -259,13 +260,14 @@ export default function AdminTestimonials() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3 md:gap-4">
           {testimonials.map((testimonial) => (
             <Card key={testimonial.id} className={!testimonial.is_active ? 'opacity-50' : ''}>
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3 md:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h3 className="font-semibold">{testimonial.name}</h3>
                       {testimonial.role && (
                         <span className="text-sm text-muted-foreground">• {testimonial.role}</span>
@@ -286,7 +288,9 @@ export default function AdminTestimonials() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 self-end sm:self-start">
                     <button
                       onClick={() => toggleActive(testimonial)}
                       className={`text-xs px-2 py-1 rounded ${
@@ -295,10 +299,10 @@ export default function AdminTestimonials() {
                     >
                       {testimonial.is_active ? 'Aktiv' : 'Inaktiv'}
                     </button>
-                    <Button size="icon" variant="ghost" onClick={() => handleEdit(testimonial)}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(testimonial)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(testimonial.id)}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(testimonial.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
