@@ -146,6 +146,7 @@ export type Database = {
           net_amount: number
           notes: string | null
           paid_date: string | null
+          receipt_file_path: string | null
           receipt_number: string | null
           receipt_url: string | null
           recurring_expense_id: string | null
@@ -165,6 +166,7 @@ export type Database = {
           net_amount?: number
           notes?: string | null
           paid_date?: string | null
+          receipt_file_path?: string | null
           receipt_number?: string | null
           receipt_url?: string | null
           recurring_expense_id?: string | null
@@ -184,6 +186,7 @@ export type Database = {
           net_amount?: number
           notes?: string | null
           paid_date?: string | null
+          receipt_file_path?: string | null
           receipt_number?: string | null
           receipt_url?: string | null
           recurring_expense_id?: string | null

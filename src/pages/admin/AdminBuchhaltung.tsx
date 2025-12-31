@@ -84,6 +84,7 @@ interface Expense {
   gross_amount: number;
   is_paid: boolean;
   receipt_url: string | null;
+  receipt_file_path: string | null;
   recurring_expense_id: string | null;
   category?: ExpenseCategory;
 }
@@ -160,8 +161,14 @@ export default function AdminBuchhaltung() {
     category_id: '',
     description: '',
     gross_amount: 0,
-    is_paid: false
+    is_paid: false,
+    receipt_file_path: ''
   });
+
+  // Upload states
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [analyzingReceipt, setAnalyzingReceipt] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Form states for recurring expense
   const [recurringForm, setRecurringForm] = useState({
@@ -345,9 +352,170 @@ export default function AdminBuchhaltung() {
     }
   };
 
+  // Upload receipt file
+  const handleReceiptUpload = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingReceipt(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `receipts/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('expense-receipts')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      return filePath;
+    } catch (error: any) {
+      console.error('Error uploading receipt:', error);
+      toast({
+        title: "Upload fehlgeschlagen",
+        description: error.message,
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
+
+  // Analyze receipt with AI
+  const handleAnalyzeReceipt = async (file: File) => {
+    try {
+      setAnalyzingReceipt(true);
+      
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      const imageBase64 = await base64Promise;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-receipt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          imageBase64,
+          mimeType: file.type
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Analyse fehlgeschlagen');
+      }
+
+      const data = result.data;
+      
+      // Find matching category
+      let categoryId = '';
+      if (data.category_suggestion) {
+        const matchedCategory = categories.find(
+          c => c.name.toLowerCase().includes(data.category_suggestion.toLowerCase()) ||
+               data.category_suggestion.toLowerCase().includes(c.name.toLowerCase())
+        );
+        if (matchedCategory) {
+          categoryId = matchedCategory.id;
+        }
+      }
+
+      // Update form with extracted data
+      setExpenseForm(prev => ({
+        ...prev,
+        vendor: data.vendor || prev.vendor,
+        description: data.description || prev.description,
+        gross_amount: data.amount || prev.gross_amount,
+        expense_date: data.date || prev.expense_date,
+        receipt_number: data.receipt_number || prev.receipt_number,
+        category_id: categoryId || prev.category_id
+      }));
+
+      toast({
+        title: "Rechnung analysiert",
+        description: "Daten wurden automatisch übernommen"
+      });
+
+    } catch (error: any) {
+      console.error('Error analyzing receipt:', error);
+      toast({
+        title: "Analyse fehlgeschlagen",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setAnalyzingReceipt(false);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setSelectedFile(file);
+    
+    // Analyze the receipt
+    await handleAnalyzeReceipt(file);
+  };
+
+  // Get receipt download URL
+  const getReceiptUrl = async (filePath: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('expense-receipts')
+        .createSignedUrl(filePath, 3600); // 1 hour validity
+
+      if (error) throw error;
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error getting receipt URL:', error);
+      return null;
+    }
+  };
+
+  // Download receipt
+  const handleDownloadReceipt = async (expense: Expense) => {
+    if (!expense.receipt_file_path) return;
+    
+    const url = await getReceiptUrl(expense.receipt_file_path);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      toast({
+        title: "Fehler",
+        description: "Beleg konnte nicht geladen werden",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Save expense
   const handleSaveExpense = async () => {
     try {
+      // Upload file if selected
+      let filePath = expenseForm.receipt_file_path;
+      if (selectedFile) {
+        const uploadedPath = await handleReceiptUpload(selectedFile);
+        if (uploadedPath) {
+          filePath = uploadedPath;
+        }
+      }
+
       const expenseData = {
         receipt_number: expenseForm.receipt_number || null,
         expense_date: expenseForm.expense_date,
@@ -356,7 +524,8 @@ export default function AdminBuchhaltung() {
         description: expenseForm.description,
         net_amount: expenseForm.gross_amount,
         gross_amount: expenseForm.gross_amount,
-        is_paid: expenseForm.is_paid
+        is_paid: expenseForm.is_paid,
+        receipt_file_path: filePath || null
       };
 
       if (selectedExpense) {
@@ -514,9 +683,11 @@ export default function AdminBuchhaltung() {
       category_id: '',
       description: '',
       gross_amount: 0,
-      is_paid: false
+      is_paid: false,
+      receipt_file_path: ''
     });
     setSelectedExpense(null);
+    setSelectedFile(null);
   };
 
   const resetRecurringForm = () => {
@@ -858,13 +1029,14 @@ export default function AdminBuchhaltung() {
                   <TableHead>Beschreibung</TableHead>
                   <TableHead className="text-right">Betrag</TableHead>
                   <TableHead>Bezahlt</TableHead>
+                  <TableHead>Beleg</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExpenses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Keine Ausgaben gefunden
                     </TableCell>
                   </TableRow>
@@ -885,6 +1057,21 @@ export default function AdminBuchhaltung() {
                           {expense.is_paid ? 'Ja' : 'Nein'}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        {expense.receipt_file_path ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            onClick={() => handleDownloadReceipt(expense)}
+                            title="Beleg herunterladen"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button 
@@ -900,7 +1087,8 @@ export default function AdminBuchhaltung() {
                                 category_id: expense.category_id || '',
                                 description: expense.description,
                                 gross_amount: Number(expense.gross_amount),
-                                is_paid: expense.is_paid
+                                is_paid: expense.is_paid,
+                                receipt_file_path: expense.receipt_file_path || ''
                               });
                               setExpenseDialogOpen(true);
                             }}
@@ -1127,13 +1315,60 @@ export default function AdminBuchhaltung() {
 
       {/* Expense Dialog */}
       <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedExpense ? 'Ausgabe bearbeiten' : 'Neue Ausgabe'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Receipt Upload Section */}
+            <div className="border-2 border-dashed rounded-lg p-4 text-center">
+              <input
+                type="file"
+                id="receipt-upload"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <label 
+                htmlFor="receipt-upload" 
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
+                {analyzingReceipt ? (
+                  <>
+                    <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+                    <span className="text-sm text-muted-foreground">Rechnung wird analysiert...</span>
+                  </>
+                ) : uploadingReceipt ? (
+                  <>
+                    <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+                    <span className="text-sm text-muted-foreground">Wird hochgeladen...</span>
+                  </>
+                ) : selectedFile ? (
+                  <>
+                    <FileText className="h-8 w-8 text-green-500" />
+                    <span className="text-sm font-medium">{selectedFile.name}</span>
+                    <span className="text-xs text-muted-foreground">Klicken um zu ändern</span>
+                  </>
+                ) : expenseForm.receipt_file_path ? (
+                  <>
+                    <FileText className="h-8 w-8 text-green-500" />
+                    <span className="text-sm font-medium">Beleg vorhanden</span>
+                    <span className="text-xs text-muted-foreground">Klicken um zu ändern</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm font-medium">Rechnung hochladen</span>
+                    <span className="text-xs text-muted-foreground">
+                      Bild oder PDF - wird automatisch analysiert
+                    </span>
+                  </>
+                )}
+              </label>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Datum *</Label>
@@ -1208,8 +1443,11 @@ export default function AdminBuchhaltung() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExpenseDialogOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleSaveExpense} disabled={!expenseForm.vendor || !expenseForm.description}>
-              {selectedExpense ? 'Speichern' : 'Hinzufügen'}
+            <Button 
+              onClick={handleSaveExpense} 
+              disabled={!expenseForm.vendor || !expenseForm.description || uploadingReceipt || analyzingReceipt}
+            >
+              {uploadingReceipt ? 'Wird hochgeladen...' : (selectedExpense ? 'Speichern' : 'Hinzufügen')}
             </Button>
           </DialogFooter>
         </DialogContent>
