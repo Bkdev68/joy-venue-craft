@@ -1,8 +1,16 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { encode as encodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
+
+// Helper to convert Uint8Array to base64
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -73,6 +81,18 @@ function wrapText(args: { text: string; font: any; fontSize: number; maxWidth: n
   }
   if (current) lines.push(current);
   return lines.length ? lines : ["-"];
+}
+
+function buildRecipientLines(invoice: InvoiceRow): string[] {
+  const lines: string[] = [];
+  if (invoice.billing_company) lines.push(invoice.billing_company);
+  lines.push(invoice.customer_name);
+  if (invoice.billing_street) lines.push(invoice.billing_street);
+  const cityLine = [invoice.billing_zip, invoice.billing_city].filter(Boolean).join(" ");
+  if (cityLine) lines.push(cityLine);
+  if (invoice.billing_country && invoice.billing_country !== "Österreich") lines.push(invoice.billing_country);
+  if (invoice.billing_vat_id) lines.push(`UID: ${invoice.billing_vat_id}`);
+  return lines;
 }
 
 async function fetchLogoPngBytes(origin: string | null): Promise<Uint8Array | null> {
@@ -296,7 +316,8 @@ const handler = async (req: Request): Promise<Response> => {
     const origin = req.headers.get("origin") ?? derivedOrigin;
 
     const pdfBytes = await generateInvoicePdf({ invoice: invoice as InvoiceRow, origin });
-    const pdfBase64 = encodeBase64(pdfBytes);
+    // Convert Uint8Array to base64 string
+    const pdfBase64 = uint8ArrayToBase64(pdfBytes);
 
     // Send email with attachment (using resend.dev until domain is verified)
     const emailResponse = await resend.emails.send({
