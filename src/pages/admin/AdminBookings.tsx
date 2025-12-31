@@ -314,35 +314,36 @@ export default function AdminBookings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Buchungen</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold">Buchungen</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             Verwalten Sie alle Buchungsanfragen
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportBookings}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
+          <Button variant="outline" size="sm" onClick={exportBookings} className="flex-1 sm:flex-none">
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Buchung hinzufügen
+              <Button size="sm" className="flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Buchung hinzufügen</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
               <DialogHeader>
                 <DialogTitle>{editingBooking ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Datum *</Label>
                     <Popover open={dateOpen} onOpenChange={setDateOpen}>
@@ -389,7 +390,7 @@ export default function AdminBookings() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Service</Label>
                     <Select
@@ -397,7 +398,7 @@ export default function AdminBookings() {
                       onValueChange={(value) => setForm(prev => ({ 
                         ...prev, 
                         service_id: value,
-                        package_id: '' // Reset package when service changes
+                        package_id: ''
                       }))}
                     >
                       <SelectTrigger>
@@ -437,7 +438,7 @@ export default function AdminBookings() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Preis (€)</Label>
                     <Input
@@ -467,7 +468,7 @@ export default function AdminBookings() {
 
                 <div className="border-t pt-4 mt-4">
                   <h4 className="font-medium mb-3">Kundendaten</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Name *</Label>
                       <Input
@@ -524,21 +525,21 @@ export default function AdminBookings() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Suche nach Name, Email oder Service..."
+                placeholder="Suche n..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-40">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Status filtern" />
+                <SelectValue placeholder="Alle Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Status</SelectItem>
@@ -551,58 +552,58 @@ export default function AdminBookings() {
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+      {/* Stats - horizontal scroll on mobile */}
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
+        <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
+          <CardContent className="pt-4 md:pt-6 p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <CalendarIcon className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{bookings.length}</p>
-                <p className="text-sm text-muted-foreground">Gesamt</p>
+                <p className="text-xl md:text-2xl font-bold">{bookings.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Gesamt</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
+          <CardContent className="pt-4 md:pt-6 p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-yellow-100 rounded-lg">
                 <Clock className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{bookings.filter(b => b.status === 'pending').length}</p>
-                <p className="text-sm text-muted-foreground">Ausstehend</p>
+                <p className="text-xl md:text-2xl font-bold">{bookings.filter(b => b.status === 'pending').length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Ausstehend</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
+          <CardContent className="pt-4 md:pt-6 p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{bookings.filter(b => b.status === 'confirmed').length}</p>
-                <p className="text-sm text-muted-foreground">Bestätigt</p>
+                <p className="text-xl md:text-2xl font-bold">{bookings.filter(b => b.status === 'confirmed').length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Bestätigt</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
+          <CardContent className="pt-4 md:pt-6 p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Euro className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-xl md:text-2xl font-bold">
                   €{bookings.filter(b => b.status === 'confirmed').reduce((sum, b) => sum + b.package_price, 0).toLocaleString()}
                 </p>
-                <p className="text-sm text-muted-foreground">Umsatz (bestätigt)</p>
+                <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">Umsatz (best.)</p>
               </div>
             </div>
           </CardContent>
@@ -611,10 +612,10 @@ export default function AdminBookings() {
 
       {/* Bookings List */}
       <Card>
-        <CardHeader>
-          <CardTitle>Buchungen ({filteredBookings.length})</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Buchungen ({filteredBookings.length})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 md:px-6">
           {filteredBookings.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Keine Buchungen gefunden.
@@ -624,19 +625,22 @@ export default function AdminBookings() {
               {filteredBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors"
+                  className="p-3 md:p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="text-center bg-muted px-3 py-2 rounded-lg min-w-[70px]">
-                      <p className="text-lg font-bold">{format(new Date(booking.date), 'd')}</p>
+                  <div className="flex items-start gap-3">
+                    {/* Date */}
+                    <div className="text-center bg-muted px-3 py-2 rounded-lg min-w-[55px] md:min-w-[70px]">
+                      <p className="text-base md:text-lg font-bold">{format(new Date(booking.date), 'd')}</p>
                       <p className="text-xs text-muted-foreground">{format(new Date(booking.date), 'MMM', { locale: de })}</p>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{booking.customer_name}</span>
+                    
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium truncate">{booking.customer_name}</span>
                         {getStatusBadge(booking.status)}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground truncate">
                         {booking.service_name} • {booking.package_name}
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -644,12 +648,14 @@ export default function AdminBookings() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  
+                  {/* Actions - separate row on mobile */}
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t">
                     <Select
                       value={booking.status}
                       onValueChange={(value) => updateStatus(booking.id, value)}
                     >
-                      <SelectTrigger className="w-32 h-8 text-xs">
+                      <SelectTrigger className="w-28 md:w-32 h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -658,15 +664,17 @@ export default function AdminBookings() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button size="icon" variant="ghost" onClick={() => handleView(booking)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleEdit(booking)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(booking.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleView(booking)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(booking)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(booking.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
