@@ -83,16 +83,21 @@ function wrapText(args: {
 }
 
 async function fetchLogoPngBytes(origin: string | null): Promise<Uint8Array | null> {
-  if (!origin) return null;
-  try {
-    const url = new URL("/pixelpalast-logo.png", origin);
-    const res = await fetch(url.toString());
-    if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
-    return new Uint8Array(buf);
-  } catch {
-    return null;
+  const candidates = [origin, "https://pixelpalast.at", "https://www.pixelpalast.at"].filter(Boolean) as string[];
+
+  for (const base of candidates) {
+    try {
+      const url = new URL("/pixelpalast-logo.png", base);
+      const res = await fetch(url.toString());
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      return new Uint8Array(buf);
+    } catch {
+      // try next candidate
+    }
   }
+
+  return null;
 }
 
 async function createOrLoadInvoice(args: {
@@ -214,6 +219,10 @@ async function generateInvoicePdf(args: {
     } catch {
       // ignore
     }
+  } else {
+    // Fallback: text logo so the header never looks empty
+    page.drawText("PIXELPALAST", { x: margin, y: y - 22, size: 18, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+    logoBottomY = y - 22;
   }
 
   // Company info (right)

@@ -86,16 +86,21 @@ function buildRecipientLines(invoice: InvoiceRow): string[] {
 }
 
 async function fetchLogoPngBytes(origin: string | null): Promise<Uint8Array | null> {
-  if (!origin) return null;
-  try {
-    const url = new URL("/pixelpalast-logo.png", origin);
-    const res = await fetch(url.toString());
-    if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
-    return new Uint8Array(buf);
-  } catch {
-    return null;
+  const candidates = [origin, "https://pixelpalast.at", "https://www.pixelpalast.at"].filter(Boolean) as string[];
+
+  for (const base of candidates) {
+    try {
+      const url = new URL("/pixelpalast-logo.png", base);
+      const res = await fetch(url.toString());
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      return new Uint8Array(buf);
+    } catch {
+      // try next candidate
+    }
   }
+
+  return null;
 }
 
 async function generateInvoicePdf(args: { invoice: InvoiceRow; origin: string | null }): Promise<Uint8Array> {
@@ -125,6 +130,10 @@ async function generateInvoicePdf(args: { invoice: InvoiceRow; origin: string | 
     } catch {
       // ignore
     }
+  } else {
+    // Fallback: text logo so the header never looks empty
+    page.drawText("PIXELPALAST", { x: margin, y: y - 22, size: 18, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+    logoBottomY = y - 22;
   }
 
   // Company info (right top)
@@ -219,35 +228,51 @@ async function generateInvoicePdf(args: { invoice: InvoiceRow; origin: string | 
   page.drawLine({ start: { x: tableX, y }, end: { x: tableX + tableW, y }, thickness: 1, color: rgb(0.7, 0.7, 0.7) });
   y -= 16;
 
-  // Totals
-  const totalsX = tableX + colDesc;
+  // Totals (right-aligned values to avoid overlaps)
+  const totalsLabelX = tableX + colDesc;
+  const totalsValueRight = tableX + tableW;
+
+  const drawRight = (value: string, yPos: number, size: number, fontUsed: any) => {
+    const w = fontUsed.widthOfTextAtSize(value, size);
+    page.drawText(value, {
+      x: totalsValueRight - w,
+      y: yPos,
+      size,
+      font: fontUsed,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+  };
+
   const netTotal = items.reduce((s, i) => s + i.amount, 0);
   const vatRate = safeNum(invoice.vat_rate);
   const vatAmount = vatRate > 0 ? safeNum(invoice.vat_amount, netTotal * (vatRate / 100)) : 0;
   const grossTotal = netTotal + vatAmount;
 
-  page.drawText("Nettobetrag:", { x: totalsX, y, size: 10, font });
-  page.drawText(formatCurrency(netTotal), { x: totalsX + colQty, y, size: 10, font: fontBold });
+  page.drawText("Nettobetrag:", { x: totalsLabelX, y, size: 10, font });
+  drawRight(formatCurrency(netTotal), y, 10, fontBold);
   y -= 14;
+
   if (vatRate > 0) {
-    page.drawText(`USt. ${vatRate}%:`, { x: totalsX, y, size: 10, font });
-    page.drawText(formatCurrency(vatAmount), { x: totalsX + colQty, y, size: 10, font: fontBold });
+    page.drawText(`USt. ${vatRate}%:`, { x: totalsLabelX, y, size: 10, font });
+    drawRight(formatCurrency(vatAmount), y, 10, fontBold);
     y -= 14;
   }
-  page.drawText("Gesamtbetrag:", { x: totalsX, y, size: 11, font: fontBold });
-  page.drawText(formatCurrency(grossTotal), { x: totalsX + colQty, y, size: 11, font: fontBold, color: rgb(0, 0, 0) });
+
+  page.drawText("Gesamtbetrag:", { x: totalsLabelX, y, size: 11, font: fontBold });
+  drawRight(formatCurrency(grossTotal), y, 11, fontBold);
   y -= 24;
 
   // Deposit info
   const deposit = safeNum(invoice.deposit_amount);
   const remaining = safeNum(invoice.remaining_amount);
   if (deposit > 0) {
-    page.drawText("Anzahlung:", { x: totalsX, y, size: 10, font });
-    page.drawText(formatCurrency(deposit), { x: totalsX + colQty, y, size: 10, font: fontBold });
+    page.drawText("Anzahlung:", { x: totalsLabelX, y, size: 10, font });
+    drawRight(formatCurrency(deposit), y, 10, fontBold);
     y -= 14;
+
     if (remaining > 0) {
-      page.drawText("Restbetrag:", { x: totalsX, y, size: 10, font });
-      page.drawText(formatCurrency(remaining), { x: totalsX + colQty, y, size: 10, font: fontBold });
+      page.drawText("Restbetrag:", { x: totalsLabelX, y, size: 10, font });
+      drawRight(formatCurrency(remaining), y, 10, fontBold);
       y -= 14;
     }
   }
