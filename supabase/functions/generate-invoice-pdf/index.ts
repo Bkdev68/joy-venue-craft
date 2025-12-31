@@ -196,6 +196,7 @@ async function generateInvoicePdf(args: {
 
   const margin = 40;
   let y = height - margin;
+  let logoBottomY = y;
 
   // Logo
   const logoBytes = await fetchLogoPngBytes(origin);
@@ -209,6 +210,7 @@ async function generateInvoicePdf(args: {
         width: dims.width,
         height: dims.height,
       });
+      logoBottomY = y - dims.height;
     } catch {
       // ignore
     }
@@ -235,11 +237,12 @@ async function generateInvoicePdf(args: {
     companyY -= 14;
   }
 
-  // Spacing below header
-  y -= 60;
+  // Layout: ensure title never overlaps logo/company header
+  const companyBottomY = companyY + 14;
+  const headerBottomY = Math.min(logoBottomY, companyBottomY);
+  y = headerBottomY - 40;
 
   // Title
-  y -= 48;
   page.drawText("RECHNUNG", {
     x: margin,
     y,
@@ -558,7 +561,11 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    const pdfBytes = await generateInvoicePdf({ invoice, origin: req.headers.get("origin") });
+    const referer = req.headers.get("referer");
+    const derivedOrigin = referer ? new URL(referer).origin : null;
+    const origin = req.headers.get("origin") ?? derivedOrigin;
+
+    const pdfBytes = await generateInvoicePdf({ invoice, origin });
     // Normalize pdf-lib output to a standard Uint8Array<ArrayBuffer> so it matches Deno's BodyInit typing.
     const pdfBody = new Uint8Array(pdfBytes);
 

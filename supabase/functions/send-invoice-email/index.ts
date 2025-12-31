@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { encode as encodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
@@ -74,19 +75,21 @@ function wrapText(args: { text: string; font: any; fontSize: number; maxWidth: n
   return lines.length ? lines : ["-"];
 }
 
-function buildRecipientLines(invoice: InvoiceRow): string[] {
-  const lines: string[] = [];
-  if (invoice.billing_company) lines.push(invoice.billing_company);
-  lines.push(invoice.customer_name);
-  if (invoice.billing_street) lines.push(invoice.billing_street);
-  const cityLine = [invoice.billing_zip, invoice.billing_city].filter(Boolean).join(" ");
-  if (cityLine) lines.push(cityLine);
-  if (invoice.billing_country && invoice.billing_country !== "Österreich") lines.push(invoice.billing_country);
-  if (invoice.billing_vat_id) lines.push(`UID: ${invoice.billing_vat_id}`);
-  return lines;
+async function fetchLogoPngBytes(origin: string | null): Promise<Uint8Array | null> {
+  if (!origin) return null;
+  try {
+    const url = new URL("/pixelpalast-logo.png", origin);
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
 }
 
-async function generateInvoicePdf(invoice: InvoiceRow): Promise<Uint8Array> {
+async function generateInvoicePdf(args: { invoice: InvoiceRow; origin: string | null }): Promise<Uint8Array> {
+  const { invoice, origin } = args;
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
   const { width, height } = page.getSize();
@@ -94,6 +97,25 @@ async function generateInvoicePdf(invoice: InvoiceRow): Promise<Uint8Array> {
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const margin = 50;
   let y = height - margin;
+  let logoBottomY = y;
+
+  // Logo (left)
+  const logoBytes = await fetchLogoPngBytes(origin);
+  if (logoBytes) {
+    try {
+      const logoImg = await pdfDoc.embedPng(logoBytes);
+      const dims = logoImg.scaleToFit(140, 46);
+      page.drawImage(logoImg, {
+        x: margin,
+        y: y - dims.height,
+        width: dims.width,
+        height: dims.height,
+      });
+      logoBottomY = y - dims.height;
+    } catch {
+      // ignore
+    }
+  }
 
   // Company info (right top)
   const companyX = width - margin - 200;
@@ -110,11 +132,12 @@ async function generateInvoicePdf(invoice: InvoiceRow): Promise<Uint8Array> {
     companyY -= 14;
   }
 
-  // Spacing below header
-  y -= 60;
+  // Layout: ensure title never overlaps logo/company header
+  const companyBottomY = companyY + 14;
+  const headerBottomY = Math.min(logoBottomY, companyBottomY);
+  y = headerBottomY - 40;
 
   // Title
-  y -= 48;
   page.drawText("RECHNUNG", { x: margin, y, size: 28, font, color: rgb(0, 0, 0) });
 
   // Recipient block
@@ -268,8 +291,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Generate PDF
-    const pdfBytes = await generateInvoicePdf(invoice as InvoiceRow);
-    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    const referer = req.headers.get("referer");
+    const derivedOrigin = referer ? new URL(referer).origin : null;
+    const origin = req.headers.get("origin") ?? derivedOrigin;
+
+    const pdfBytes = await generateInvoicePdf({ invoice: invoice as InvoiceRow, origin });
+    const pdfBase64 = encodeBase64(pdfBytes);
 
     // Send email with attachment (using resend.dev until domain is verified)
     const emailResponse = await resend.emails.send({
