@@ -33,6 +33,15 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  customer_name: string;
+  gross_amount: number;
+  payment_status: string;
+  invoice_date: string;
+}
+
 interface Booking {
   id: string;
   date: string;
@@ -49,6 +58,7 @@ interface Booking {
   status: string;
   created_at: string;
   updated_at: string;
+  invoice?: Invoice | null;
 }
 
 interface Service {
@@ -94,6 +104,7 @@ export default function AdminBookings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateOpen, setDateOpen] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     date: undefined as Date | undefined,
@@ -113,14 +124,29 @@ export default function AdminBookings() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bookingsRes, servicesRes, packagesRes] = await Promise.all([
+      const [bookingsRes, servicesRes, packagesRes, invoicesRes] = await Promise.all([
         supabase.from('bookings').select('*').order('date', { ascending: false }),
         supabase.from('services').select('id, title').eq('is_active', true),
         supabase.from('packages').select('id, name, service_id, base_price, price').eq('is_active', true),
+        supabase.from('invoices').select('id, invoice_number, booking_id, customer_name, gross_amount, payment_status, invoice_date'),
       ]);
 
       if (bookingsRes.error) throw bookingsRes.error;
-      setBookings(bookingsRes.data || []);
+      
+      // Map invoices to bookings
+      const invoicesByBookingId = new Map<string, Invoice>();
+      (invoicesRes.data || []).forEach((inv: any) => {
+        if (inv.booking_id) {
+          invoicesByBookingId.set(inv.booking_id, inv);
+        }
+      });
+
+      const bookingsWithInvoices = (bookingsRes.data || []).map(booking => ({
+        ...booking,
+        invoice: invoicesByBookingId.get(booking.id) || null
+      }));
+
+      setBookings(bookingsWithInvoices);
       setServices(servicesRes.data || []);
       setPackages(packagesRes.data || []);
     } catch (error) {
@@ -175,6 +201,41 @@ export default function AdminBookings() {
   const handleView = (booking: Booking) => {
     setViewingBooking(booking);
     setDetailDialogOpen(true);
+  };
+
+  // Generate and download invoice
+  const generateInvoice = async (booking: Booking, existingInvoiceId?: string) => {
+    setGeneratingInvoice(booking.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
+        body: existingInvoiceId 
+          ? { invoiceId: existingInvoiceId }
+          : { bookingId: booking.id }
+      });
+
+      if (error) throw error;
+
+      // Open print dialog with invoice HTML
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(data.html);
+        printWindow.document.close();
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+
+      // Refresh to show linked invoice
+      if (!existingInvoiceId) {
+        toast.success('Rechnung erstellt');
+        fetchData();
+      }
+    } catch (error: any) {
+      console.error('Error generating invoice:', error);
+      toast.error('Fehler beim Erstellen der Rechnung: ' + error.message);
+    } finally {
+      setGeneratingInvoice(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -639,6 +700,12 @@ export default function AdminBookings() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium truncate">{booking.customer_name}</span>
                         {getStatusBadge(booking.status)}
+                        {booking.invoice && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            <FileText className="h-3 w-3 mr-1" />
+                            {booking.invoice.invoice_number}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
                         {booking.service_name} • {booking.package_name}
@@ -665,6 +732,21 @@ export default function AdminBookings() {
                       </SelectContent>
                     </Select>
                     <div className="flex items-center">
+                      {/* Invoice button */}
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8" 
+                        onClick={() => generateInvoice(booking, booking.invoice?.id)}
+                        disabled={generatingInvoice === booking.id}
+                        title={booking.invoice ? 'Rechnung anzeigen' : 'Rechnung erstellen'}
+                      >
+                        {generatingInvoice === booking.id ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        ) : (
+                          <FileText className={`h-4 w-4 ${booking.invoice ? 'text-blue-600' : ''}`} />
+                        )}
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleView(booking)}>
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -759,6 +841,55 @@ export default function AdminBookings() {
                   </p>
                 </div>
               )}
+
+              {/* Invoice Section */}
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4" /> Rechnung
+                </h4>
+                {viewingBooking.invoice ? (
+                  <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{viewingBooking.invoice.invoice_number}</span>
+                      <Badge variant={viewingBooking.invoice.payment_status === 'bezahlt' ? 'default' : 'outline'}>
+                        {viewingBooking.invoice.payment_status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <p>Betrag: €{Number(viewingBooking.invoice.gross_amount).toFixed(2)}</p>
+                      <p>Datum: {format(new Date(viewingBooking.invoice.invoice_date), 'dd.MM.yyyy')}</p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => generateInvoice(viewingBooking, viewingBooking.invoice?.id)}
+                      disabled={generatingInvoice === viewingBooking.id}
+                    >
+                      {generatingInvoice === viewingBooking.id ? (
+                        <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      Rechnung herunterladen
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => generateInvoice(viewingBooking)}
+                    disabled={generatingInvoice === viewingBooking.id}
+                  >
+                    {generatingInvoice === viewingBooking.id ? (
+                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    ) : (
+                      <FileText className="h-4 w-4 mr-2" />
+                    )}
+                    Rechnung erstellen
+                  </Button>
+                )}
+              </div>
 
               <div className="flex gap-2 pt-4">
                 <Button onClick={() => handleEdit(viewingBooking)} className="flex-1">
