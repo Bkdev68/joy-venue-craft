@@ -358,40 +358,129 @@ const handler = async (req: Request): Promise<Response> => {
 
     const pdfBytes = await generateInvoicePdf({ invoice: invoice as InvoiceRow, origin });
 
-    // Email HTML
+    // Email HTML - Professional branded template
     const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #D4AF37;">Ihre Rechnung</h1>
-        
-        <p>Guten Tag ${invoice.customer_name},</p>
-        
-        <p>anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> für unsere Leistungen.</p>
-        
-        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; margin: 20px 0;">
-          <p><strong>Rechnungsnummer:</strong> ${invoice.invoice_number}</p>
-          <p><strong>Rechnungsdatum:</strong> ${formatDate(invoice.invoice_date)}</p>
-          <p><strong>Gesamtbetrag:</strong> <span style="color: #D4AF37; font-size: 18px;">${formatCurrency(safeNum(invoice.gross_amount))}</span></p>
-        </div>
-        
-        <p>Die Rechnung finden Sie im PDF-Anhang dieser E-Mail.</p>
-        
-        <p><strong>Zahlungsziel:</strong> 14 Tage nach Rechnungsdatum</p>
-        
-        <p style="margin-top: 30px;">
-          Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verfügung.
-        </p>
-        
-        <p>Mit freundlichen Grüßen,<br>
-        <strong>Ihr PixelPalast Team</strong></p>
-        
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-        
-        <p style="color: #999; font-size: 12px;">
-          PixelPalast - Photo Booth & 360° Video Booth<br>
-          Marcel Fischer | Wildstraße 5 | 2100 Korneuburg<br>
-          <a href="https://pixelpalast.at" style="color: #D4AF37;">www.pixelpalast.at</a>
-        </p>
-      </div>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 40px 40px 30px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #D4AF37; font-size: 28px; font-weight: 700; letter-spacing: 2px;">PIXELPALAST</h1>
+              <p style="margin: 8px 0 0 0; color: #888888; font-size: 12px; letter-spacing: 1px;">PHOTO BOOTH & 360° VIDEO BOOTH</p>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 24px 0; color: #1a1a1a; font-size: 24px; font-weight: 600;">Ihre Rechnung</h2>
+              
+              <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                Guten Tag <strong>${invoice.customer_name}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 30px 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                vielen Dank für Ihr Vertrauen! Anbei erhalten Sie Ihre Rechnung für unsere Leistungen.
+              </p>
+              
+              <!-- Invoice Details Card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%); border-radius: 12px; border-left: 4px solid #D4AF37;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <span style="color: #888888; font-size: 13px;">Rechnungsnummer</span><br>
+                          <span style="color: #1a1a1a; font-size: 18px; font-weight: 600;">${invoice.invoice_number}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <span style="color: #888888; font-size: 13px;">Rechnungsdatum</span><br>
+                          <span style="color: #1a1a1a; font-size: 16px;">${formatDate(invoice.invoice_date)}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 16px 0 8px 0; border-top: 1px solid #e0e0e0; margin-top: 8px;">
+                          <span style="color: #888888; font-size: 13px;">Gesamtbetrag</span><br>
+                          <span style="color: #D4AF37; font-size: 28px; font-weight: 700;">${formatCurrency(safeNum(invoice.gross_amount))}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- PDF Notice -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 24px;">
+                <tr>
+                  <td style="background-color: #f8f8f8; border-radius: 8px; padding: 16px; text-align: center;">
+                    <span style="color: #666666; font-size: 14px;">📎 Die vollständige Rechnung finden Sie im <strong>PDF-Anhang</strong> dieser E-Mail.</span>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Payment Info -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 24px;">
+                <tr>
+                  <td style="padding: 20px; background-color: #1a1a1a; border-radius: 8px;">
+                    <p style="margin: 0; color: #D4AF37; font-size: 14px; font-weight: 600;">💳 Zahlungsziel</p>
+                    <p style="margin: 8px 0 0 0; color: #ffffff; font-size: 15px;">14 Tage nach Rechnungsdatum</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verfügung.
+              </p>
+              
+              <p style="margin: 24px 0 0 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                Mit freundlichen Grüßen,<br>
+                <strong style="color: #1a1a1a;">Ihr PixelPalast Team</strong>
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #1a1a1a; padding: 30px 40px; text-align: center;">
+              <p style="margin: 0 0 8px 0; color: #D4AF37; font-size: 14px; font-weight: 600;">PixelPalast</p>
+              <p style="margin: 0 0 16px 0; color: #888888; font-size: 13px;">
+                Marcel Fischer | Wildstraße 5 | 2100 Korneuburg
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://pixelpalast.at" style="color: #D4AF37; text-decoration: none; font-size: 13px;">www.pixelpalast.at</a>
+                  </td>
+                  <td style="color: #555555;">|</td>
+                  <td style="padding: 0 8px;">
+                    <a href="mailto:office@pixelpalast.at" style="color: #888888; text-decoration: none; font-size: 13px;">office@pixelpalast.at</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 16px 0 0 0; color: #555555; font-size: 11px;">
+                © ${new Date().getFullYear()} PixelPalast. Alle Rechte vorbehalten.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `;
 
     // Send email with PDF attachment via Strato SMTP
