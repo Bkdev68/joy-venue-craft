@@ -29,6 +29,14 @@ interface BookingRequest {
   phone?: string;
   message?: string;
   adminEmail?: string;
+  // Billing address fields
+  billingCompany?: string;
+  billingName?: string;
+  billingStreet?: string;
+  billingZip?: string;
+  billingCity?: string;
+  billingCountry?: string;
+  billingVatId?: string;
 }
 
 // Helper to safely display values (avoid undefined/null appearing in email)
@@ -67,6 +75,14 @@ const handler = async (req: Request): Promise<Response> => {
         customer_phone: booking.phone || null,
         message: booking.message || null,
         status: "pending",
+        // Billing address fields
+        billing_company: booking.billingCompany || null,
+        billing_name: booking.billingName || null,
+        billing_street: booking.billingStreet || null,
+        billing_zip: booking.billingZip || null,
+        billing_city: booking.billingCity || null,
+        billing_country: booking.billingCountry || null,
+        billing_vat_id: booking.billingVatId || null,
       });
 
     if (dbError) {

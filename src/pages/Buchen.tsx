@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Check, Calendar as CalendarIcon, Package, User, Send, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Calendar as CalendarIcon, Package, User, Send, Clock, Building2, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { trackBookingStep, trackBookingComplete, trackBookingAbandonment } from "@/hooks/useAnalytics";
@@ -75,7 +75,17 @@ export default function Buchen() {
     email: "",
     phone: "",
     message: "",
+    // Billing address fields
+    billingCompany: "",
+    billingName: "",
+    billingStreet: "",
+    billingZip: "",
+    billingCity: "",
+    billingCountry: "Österreich",
+    billingVatId: "",
   });
+  
+  const [showBillingAddress, setShowBillingAddress] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -223,6 +233,14 @@ export default function Buchen() {
           phone: formData.phone || undefined,
           message: formData.message || undefined,
           adminEmail: adminEmail || undefined,
+          // Billing address fields
+          billingCompany: formData.billingCompany || undefined,
+          billingName: formData.billingName || undefined,
+          billingStreet: formData.billingStreet || undefined,
+          billingZip: formData.billingZip || undefined,
+          billingCity: formData.billingCity || undefined,
+          billingCountry: formData.billingCountry || undefined,
+          billingVatId: formData.billingVatId || undefined,
         },
       });
 
@@ -546,6 +564,82 @@ export default function Buchen() {
                     placeholder="Besondere Wünsche oder Fragen?"
                     rows={4}
                   />
+                </div>
+
+                {/* Billing Address Section */}
+                <div className="pt-4 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setShowBillingAddress(!showBillingAddress)}
+                    className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Rechnungsadresse / Firmendaten (optional)
+                    </span>
+                    {showBillingAddress ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                  
+                  {showBillingAddress && (
+                    <div className="mt-4 space-y-4 animate-in slide-in-from-top-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="billingCompany">Firma</Label>
+                        <Input
+                          id="billingCompany"
+                          value={formData.billingCompany}
+                          onChange={(e) => setFormData({ ...formData, billingCompany: e.target.value })}
+                          placeholder="Firmenname (falls abweichend)"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="billingName">Name auf Rechnung</Label>
+                        <Input
+                          id="billingName"
+                          value={formData.billingName}
+                          onChange={(e) => setFormData({ ...formData, billingName: e.target.value })}
+                          placeholder="Falls abweichend von oben"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="billingStreet">Straße & Hausnummer</Label>
+                        <Input
+                          id="billingStreet"
+                          value={formData.billingStreet}
+                          onChange={(e) => setFormData({ ...formData, billingStreet: e.target.value })}
+                          placeholder="Musterstraße 123"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="billingZip">PLZ</Label>
+                          <Input
+                            id="billingZip"
+                            value={formData.billingZip}
+                            onChange={(e) => setFormData({ ...formData, billingZip: e.target.value })}
+                            placeholder="1010"
+                          />
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                          <Label htmlFor="billingCity">Ort</Label>
+                          <Input
+                            id="billingCity"
+                            value={formData.billingCity}
+                            onChange={(e) => setFormData({ ...formData, billingCity: e.target.value })}
+                            placeholder="Wien"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="billingVatId">UID-Nummer (optional)</Label>
+                        <Input
+                          id="billingVatId"
+                          value={formData.billingVatId}
+                          onChange={(e) => setFormData({ ...formData, billingVatId: e.target.value })}
+                          placeholder="ATU12345678"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
