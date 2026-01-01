@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, Mail, Phone, MapPin, Instagram, Facebook, BarChart3 } from 'lucide-react';
+import { Save, Mail, Phone, MapPin, Instagram, Facebook, BarChart3, Construction, AlertTriangle } from 'lucide-react';
+import { useMaintenanceMode } from '@/hooks/useMaintenanceMode';
 
 interface Settings {
   booking_email: string;
@@ -18,6 +20,8 @@ interface Settings {
 }
 
 export default function AdminSettings() {
+  const { isMaintenanceMode, setMaintenanceMode } = useMaintenanceMode();
+  const [maintenanceToggling, setMaintenanceToggling] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     booking_email: '',
     contact_email: '',
@@ -29,6 +33,18 @@ export default function AdminSettings() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const handleMaintenanceToggle = async (enabled: boolean) => {
+    setMaintenanceToggling(true);
+    try {
+      await setMaintenanceMode(enabled);
+      toast.success(enabled ? 'Wartungsmodus aktiviert' : 'Wartungsmodus deaktiviert');
+    } catch (error) {
+      toast.error('Fehler beim Ändern des Wartungsmodus');
+    } finally {
+      setMaintenanceToggling(false);
+    }
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -105,6 +121,43 @@ export default function AdminSettings() {
       </div>
 
       <div className="grid gap-6">
+        {/* Maintenance Mode */}
+        <Card className={isMaintenanceMode ? 'border-yellow-500 bg-yellow-500/5' : ''}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Construction className="h-5 w-5" />
+              Wartungsmodus
+            </CardTitle>
+            <CardDescription>
+              Schalten Sie die Webseite offline für Wartungsarbeiten
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="maintenance_mode">Wartungsmodus aktivieren</Label>
+                <p className="text-xs text-muted-foreground">
+                  Besucher sehen eine Wartungsseite. Admins haben weiterhin Zugang.
+                </p>
+              </div>
+              <Switch
+                id="maintenance_mode"
+                checked={isMaintenanceMode}
+                onCheckedChange={handleMaintenanceToggle}
+                disabled={maintenanceToggling}
+              />
+            </div>
+            {isMaintenanceMode && (
+              <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/20 p-3 rounded-lg">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <p className="text-sm font-medium">
+                  Die Webseite ist derzeit offline für Besucher!
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Email Settings */}
         <Card>
           <CardHeader>
