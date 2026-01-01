@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SiteContentProvider } from "@/hooks/useSiteContent";
+import { MaintenanceModeProvider } from "@/hooks/useMaintenanceMode";
+import { MaintenanceWrapper } from "@/components/MaintenanceWrapper";
 import Index from "./pages/Index";
 import Leistungen from "./pages/Leistungen";
 import Photobooth from "./pages/services/Photobooth";
@@ -44,10 +46,12 @@ const App = () => (
       <TooltipProvider>
         <AuthProvider>
           <SiteContentProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-            <Routes>
+            <MaintenanceModeProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <MaintenanceWrapper>
+                  <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/leistungen" element={<Leistungen />} />
               <Route path="/leistungen/photobooth" element={<Photobooth />} />
@@ -77,9 +81,11 @@ const App = () => (
                 <Route path="seite/preise" element={<AdminPreise />} />
                 <Route path="seite/kontakt" element={<AdminKontakt />} />
               </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </MaintenanceWrapper>
+            </BrowserRouter>
+          </MaintenanceModeProvider>
         </SiteContentProvider>
       </AuthProvider>
     </TooltipProvider>
