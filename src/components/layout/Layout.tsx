@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { StickyCTA } from "./StickyCTA";
-import { ChatBot } from "@/components/chat/ChatBot";
+// import { ChatBot } from "@/components/chat/ChatBot"; // Temporarily disabled for migration
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { usePageTracking, useScrollTracking, useTimeOnPage } from "@/hooks/useAnalytics";
 
@@ -25,7 +25,7 @@ export function Layout({ children }: LayoutProps) {
       <main className="flex-1">{children}</main>
       <Footer />
       <StickyCTA />
-      <ChatBot />
+      {/* <ChatBot /> */} {/* Temporarily disabled for migration */}
     </div>
   );
 }
