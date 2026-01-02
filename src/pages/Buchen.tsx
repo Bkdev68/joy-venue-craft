@@ -207,7 +207,7 @@ export default function Buchen() {
         ? `${formData.timeFrom} - ${formData.timeTo}${formData.timeTo < formData.timeFrom ? ' (nächster Tag)' : ''}`
         : '';
       
-      const { data, error } = await supabase.functions.invoke('send-booking-email', {
+      const { data, error, response } = await supabase.functions.invoke('send-booking-email', {
         body: {
           date: formData.date?.toLocaleDateString("de-AT", {
             weekday: "long",
@@ -244,7 +244,16 @@ export default function Buchen() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        let serverMessage: string | null = null;
+        try {
+          serverMessage = response ? await response.text() : null;
+        } catch {
+          // ignore
+        }
+        (error as any).serverMessage = serverMessage;
+        throw error;
+      }
 
       const customerEmailSent = data?.customerEmailSent !== false;
 
@@ -267,9 +276,23 @@ export default function Buchen() {
       setStep(5);
     } catch (error) {
       console.error('Error sending booking:', error);
+
+      const err = error as any;
+      const parts = [
+        err?.name,
+        err?.message,
+        err?.context?.status ? `Status ${err.context.status}` : null,
+        err?.context?.requestId ? `RequestId ${err.context.requestId}` : null,
+      ].filter(Boolean);
+
+      const serverMessage = err?.serverMessage ? String(err.serverMessage).trim() : '';
+      const technical = parts.join(' • ');
+
       toast({
         title: "Fehler beim Senden",
-        description: "Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.",
+        description: technical || serverMessage
+          ? `Technische Details: ${[technical, serverMessage].filter(Boolean).join(' — ')}`
+          : "Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.",
         variant: "destructive",
       });
     } finally {
