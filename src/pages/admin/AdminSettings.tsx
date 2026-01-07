@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, Mail, Phone, MapPin, Instagram, Facebook, BarChart3, Construction, AlertTriangle } from 'lucide-react';
+import { Save, Mail, Phone, MapPin, Instagram, Facebook, BarChart3, Construction, AlertTriangle, Lock, Eye, EyeOff } from 'lucide-react';
 import { useMaintenanceMode } from '@/hooks/useMaintenanceMode';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Settings {
   booking_email: string;
@@ -20,6 +21,7 @@ interface Settings {
 }
 
 export default function AdminSettings() {
+  const { user } = useAuth();
   const { isMaintenanceMode, setMaintenanceMode } = useMaintenanceMode();
   const [maintenanceToggling, setMaintenanceToggling] = useState(false);
   const [settings, setSettings] = useState<Settings>({
@@ -33,6 +35,13 @@ export default function AdminSettings() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Password change state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const handleMaintenanceToggle = async (enabled: boolean) => {
     setMaintenanceToggling(true);
@@ -43,6 +52,41 @@ export default function AdminSettings() {
       toast.error('Fehler beim Ändern des Wartungsmodus');
     } finally {
       setMaintenanceToggling(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast.error('Bitte beide Felder ausfüllen');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      toast.error('Passwort muss mindestens 6 Zeichen haben');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwörter stimmen nicht überein');
+      return;
+    }
+    
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Passwort erfolgreich geändert');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast.error(error.message || 'Fehler beim Ändern des Passworts');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -289,6 +333,76 @@ export default function AdminSettings() {
                 Finden Sie Ihre ID unter Google Analytics → Admin → Datenstreams → Web
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Password Change */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Passwort ändern
+            </CardTitle>
+            <CardDescription>
+              Ändern Sie Ihr Admin-Passwort
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {user?.email && (
+              <div className="text-sm text-muted-foreground mb-4">
+                Eingeloggt als: <span className="font-medium text-foreground">{user.email}</span>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="new_password">Neues Passwort</Label>
+              <div className="relative">
+                <Input
+                  id="new_password"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mindestens 6 Zeichen"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm_password">Passwort bestätigen</Label>
+              <div className="relative">
+                <Input
+                  id="confirm_password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Passwort wiederholen"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <Button 
+              onClick={handlePasswordChange} 
+              disabled={changingPassword || !newPassword || !confirmPassword}
+              variant="outline"
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              {changingPassword ? 'Wird geändert...' : 'Passwort ändern'}
+            </Button>
           </CardContent>
         </Card>
       </div>
