@@ -29,11 +29,13 @@ import {
   Download,
   Eye,
   Camera,
-  Loader2
+  Loader2,
+  Calculator
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { PriceCalculator } from '@/components/admin/PriceCalculator';
 
 interface Invoice {
   id: string;
@@ -694,9 +696,20 @@ export default function AdminBookings() {
                   </div>
                 </div>
 
+                {/* Price Calculator */}
+                <PriceCalculator 
+                  compact={true}
+                  onPriceCalculated={(price) => {
+                    setForm(prev => ({ ...prev, package_price: price.toString() }));
+                  }}
+                />
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Preis (€)</Label>
+                    <Label className="flex items-center gap-2">
+                      <Euro className="h-4 w-4 text-muted-foreground" />
+                      Preis (€)
+                    </Label>
                     <Input
                       type="number"
                       value={form.package_price}
