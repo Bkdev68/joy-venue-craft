@@ -137,7 +137,7 @@ export default function EmbedContactForm() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-black">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'hsl(0 0% 7%)' }}>
         <div className="text-center space-y-4 max-w-md">
           <div className="w-16 h-16 mx-auto bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-black" />
@@ -158,7 +158,7 @@ export default function EmbedContactForm() {
   }
 
   return (
-    <div className="bg-black text-white p-4 md:p-6">
+    <div className="text-white p-4 md:p-6" style={{ backgroundColor: 'hsl(0 0% 7%)' }}>
       <div className="max-w-4xl mx-auto">
         {/* Compact Header */}
         <div className="text-center mb-6">
