@@ -27,7 +27,9 @@ import {
   User,
   FileText,
   Download,
-  Eye
+  Eye,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -107,6 +109,7 @@ export default function AdminBookings() {
   const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
   const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState<string | null>(null);
   const [emailPreviewBooking, setEmailPreviewBooking] = useState<Booking | null>(null);
+  const [analyzingImage, setAnalyzingImage] = useState(false);
 
   const [form, setForm] = useState({
     date: undefined as Date | undefined,
@@ -437,6 +440,64 @@ export default function AdminBookings() {
     );
   };
 
+  // Analyze booking from image/screenshot
+  const handleImageAnalysis = async (file: File) => {
+    setAnalyzingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(',')[1];
+        const mimeType = file.type;
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const response = await fetch(`${supabaseUrl}/functions/v1/analyze-booking-image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ imageBase64: base64, mimeType }),
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const data = result.data;
+          // Find matching service
+          const matchedService = services.find(s => 
+            s.title.toLowerCase().includes(data.service_name?.toLowerCase() || '') ||
+            data.service_name?.toLowerCase().includes(s.title.toLowerCase())
+          );
+
+          setForm(prev => ({
+            ...prev,
+            customer_name: data.customer_name || prev.customer_name,
+            customer_email: data.customer_email || prev.customer_email,
+            customer_phone: data.customer_phone || prev.customer_phone,
+            event_type: data.event_type || prev.event_type,
+            date: data.date ? new Date(data.date) : prev.date,
+            service_id: matchedService?.id || prev.service_id,
+            service_name: data.service_name || prev.service_name,
+            package_name: data.package_name || prev.package_name,
+            package_price: data.package_price?.toString() || prev.package_price,
+            message: data.message || prev.message,
+          }));
+          toast.success('Buchungsdaten aus Bild extrahiert');
+        } else {
+          toast.error(result.error || 'Konnte keine Daten extrahieren');
+        }
+        setAnalyzingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error analyzing image:', error);
+      toast.error('Fehler bei der Bildanalyse');
+      setAnalyzingImage(false);
+    }
+  };
+
   const exportBookings = () => {
     const csvContent = [
       ['Datum', 'Event', 'Service', 'Paket', 'Preis', 'Name', 'Email', 'Telefon', 'Status'].join(';'),
@@ -493,6 +554,39 @@ export default function AdminBookings() {
               <DialogHeader>
                 <DialogTitle>{editingBooking ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
               </DialogHeader>
+              
+              {/* Image Upload for AI Analysis */}
+              {!editingBooking && (
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    id="booking-image-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageAnalysis(file);
+                      e.target.value = '';
+                    }}
+                    disabled={analyzingImage}
+                  />
+                  <label htmlFor="booking-image-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                    {analyzingImage ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                        <span className="text-sm font-medium">Analysiere Bild...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm font-medium">Screenshot/Foto hochladen</span>
+                        <span className="text-xs text-muted-foreground">KI extrahiert automatisch die Buchungsdaten</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">

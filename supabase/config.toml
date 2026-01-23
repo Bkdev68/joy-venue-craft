@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.analyze-receipt]
 verify_jwt = false
+
+[functions.analyze-booking-image]
+verify_jwt = false
+
+[functions.chat-support]
+verify_jwt = false
