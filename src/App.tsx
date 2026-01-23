@@ -38,6 +38,7 @@ import AdminHome from "./pages/admin/AdminHome";
 import AdminLeistungen from "./pages/admin/AdminLeistungen";
 import AdminPreise from "./pages/admin/AdminPreise";
 import AdminKontakt from "./pages/admin/AdminKontakt";
+import AdminKalender from "./pages/admin/AdminKalender";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
                 <Route index element={<AdminDashboard />} />
                 <Route path="insights" element={<AdminInsights />} />
                 <Route path="buchungen" element={<AdminBookings />} />
+                <Route path="kalender" element={<AdminKalender />} />
                 <Route path="buchhaltung" element={<AdminBuchhaltung />} />
                 <Route path="galerie" element={<AdminGallery />} />
                 <Route path="services" element={<AdminServices />} />
