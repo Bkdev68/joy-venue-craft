@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.chat-support]
 verify_jwt = false
+
+[functions.send-embed-notification]
+verify_jwt = false
+
+[functions.generate-ai-response]
+verify_jwt = false
