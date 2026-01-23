@@ -561,7 +561,7 @@ export default function AdminBookings() {
                   <input
                     type="file"
                     id="booking-image-upload"
-                    accept="image/*"
+                    accept="image/*,.pdf,application/pdf"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -574,12 +574,12 @@ export default function AdminBookings() {
                     {analyzingImage ? (
                       <>
                         <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                        <span className="text-sm font-medium">Analysiere Bild...</span>
+                        <span className="text-sm font-medium">Analysiere Dokument...</span>
                       </>
                     ) : (
                       <>
                         <Camera className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-sm font-medium">Screenshot/Foto hochladen</span>
+                        <span className="text-sm font-medium">Screenshot, Foto oder PDF hochladen</span>
                         <span className="text-xs text-muted-foreground">KI extrahiert automatisch die Buchungsdaten</span>
                       </>
                     )}
