@@ -573,6 +573,155 @@ export type Database = {
           },
         ]
       }
+      pricing_base: {
+        Row: {
+          base_price: number
+          created_at: string
+          display_name: string
+          hourly_rate: number
+          id: string
+          is_active: boolean | null
+          min_hours: number
+          rental_object: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number
+          created_at?: string
+          display_name: string
+          hourly_rate?: number
+          id?: string
+          is_active?: boolean | null
+          min_hours?: number
+          rental_object: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          display_name?: string
+          hourly_rate?: number
+          id?: string
+          is_active?: boolean | null
+          min_hours?: number
+          rental_object?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pricing_combos: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          name: string
+          rental_objects: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          rental_objects: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          rental_objects?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pricing_tiers: {
+        Row: {
+          created_at: string
+          hourly_rate: number
+          id: string
+          max_hours: number | null
+          min_hours: number
+          rental_object: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_rate: number
+          id?: string
+          max_hours?: number | null
+          min_hours: number
+          rental_object: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          max_hours?: number | null
+          min_hours?: number
+          rental_object?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_tiers_rental_object_fkey"
+            columns: ["rental_object"]
+            isOneToOne: false
+            referencedRelation: "pricing_base"
+            referencedColumns: ["rental_object"]
+          },
+        ]
+      }
+      pricing_travel: {
+        Row: {
+          created_at: string
+          free_kilometers: number
+          id: string
+          is_active: boolean | null
+          max_charge: number | null
+          min_charge: number
+          name: string
+          rate_per_km: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          free_kilometers?: number
+          id?: string
+          is_active?: boolean | null
+          max_charge?: number | null
+          min_charge?: number
+          name?: string
+          rate_per_km?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          free_kilometers?: number
+          id?: string
+          is_active?: boolean | null
+          max_charge?: number | null
+          min_charge?: number
+          name?: string
+          rate_per_km?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       recurring_expenses: {
         Row: {
           amount: number
