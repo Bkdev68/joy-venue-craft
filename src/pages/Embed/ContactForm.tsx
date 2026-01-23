@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,41 @@ export default function EmbedContactForm() {
   const [eventMinute, setEventMinute] = useState("00");
   const [referralSources, setReferralSources] = useState<string[]>([]);
 
+  // ResizeObserver for iframe auto-height
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sendHeight = () => {
+      if (containerRef.current) {
+        const height = containerRef.current.scrollHeight;
+        window.parent.postMessage(
+          { type: "pixelpalast-embed-resize", height },
+          "*"
+        );
+      }
+    };
+
+    // Initial send
+    sendHeight();
+
+    // Observe size changes
+    const resizeObserver = new ResizeObserver(() => {
+      sendHeight();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // Also send on window resize
+    window.addEventListener("resize", sendHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", sendHeight);
+    };
+  }, [isSuccess, customerType]); // Re-run when content changes significantly
+
   const handleRentalObjectChange = (value: string, checked: boolean) => {
     setRentalObjects((prev) =>
       checked ? [...prev, value] : prev.filter((v) => v !== value)
@@ -137,7 +172,7 @@ export default function EmbedContactForm() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#0C0C0B' }}>
+      <div ref={containerRef} className="flex items-center justify-center p-8" style={{ backgroundColor: '#0C0C0B' }}>
         <div className="text-center space-y-4 max-w-md">
           <div className="w-16 h-16 mx-auto bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-black" />
@@ -158,7 +193,7 @@ export default function EmbedContactForm() {
   }
 
   return (
-    <div className="text-white p-4 md:p-6" style={{ backgroundColor: '#0C0C0B' }}>
+    <div ref={containerRef} className="text-white p-4 md:p-6" style={{ backgroundColor: '#0C0C0B' }}>
       <div className="max-w-4xl mx-auto">
         {/* Compact Header */}
         <div className="text-center mb-6">
