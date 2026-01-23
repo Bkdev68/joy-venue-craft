@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.generate-ai-response]
 verify_jwt = false
+
+[functions.send-ai-email]
+verify_jwt = false

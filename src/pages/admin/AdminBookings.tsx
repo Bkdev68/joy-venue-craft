@@ -135,6 +135,7 @@ export default function AdminBookings() {
   const [aiContent, setAiContent] = useState('');
   const [aiBooking, setAiBooking] = useState<Booking | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sendingAiEmail, setSendingAiEmail] = useState(false);
 
   const [form, setForm] = useState({
     date: undefined as Date | undefined,
@@ -616,6 +617,47 @@ export default function AdminBookings() {
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       toast.error('Kopieren fehlgeschlagen');
+    }
+  };
+
+  // Send AI-generated content via email
+  const sendAIEmail = async () => {
+    if (!aiBooking || !aiContent) return;
+    
+    setSendingAiEmail(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-ai-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          to: aiBooking.customer_email,
+          customerName: aiBooking.customer_name,
+          content: aiContent,
+          type: aiType,
+          eventType: aiBooking.event_type,
+          eventDate: aiBooking.date,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Fehler beim Senden');
+      }
+
+      toast.success(`${aiType === 'offer' ? 'Angebot' : 'Antwort'} an ${aiBooking.customer_email} gesendet!`);
+      setAiDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error sending AI email:', error);
+      toast.error('Fehler beim Senden: ' + (error.message || 'Unbekannter Fehler'));
+    } finally {
+      setSendingAiEmail(false);
     }
   };
 
@@ -1387,30 +1429,53 @@ export default function AdminBookings() {
                 </div>
               </ScrollArea>
               
-              <div className="flex gap-2">
-                <Button onClick={copyToClipboard} className="flex-1">
-                  {copied ? (
+              <div className="flex flex-col gap-3">
+                {/* Send Email Button - Primary Action */}
+                <Button 
+                  onClick={sendAIEmail} 
+                  className="w-full"
+                  disabled={sendingAiEmail}
+                >
+                  {sendingAiEmail ? (
                     <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Kopiert!
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Wird gesendet...
                     </>
                   ) : (
                     <>
-                      <Copy className="h-4 w-4 mr-2" />
-                      In Zwischenablage kopieren
+                      <Mail className="h-4 w-4 mr-2" />
+                      Per E-Mail an {aiBooking?.customer_email} senden
                     </>
                   )}
                 </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => aiBooking && generateAIResponse(aiBooking, aiType)}
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Neu generieren
-                </Button>
-                <Button variant="outline" onClick={() => setAiDialogOpen(false)}>
-                  Schließen
-                </Button>
+                
+                {/* Secondary Actions */}
+                <div className="flex gap-2">
+                  <Button onClick={copyToClipboard} variant="outline" className="flex-1">
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Kopiert!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Kopieren
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => aiBooking && generateAIResponse(aiBooking, aiType)}
+                    disabled={sendingAiEmail}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Neu
+                  </Button>
+                  <Button variant="outline" onClick={() => setAiDialogOpen(false)}>
+                    Schließen
+                  </Button>
+                </div>
               </div>
             </div>
           )}
