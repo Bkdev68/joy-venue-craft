@@ -158,53 +158,53 @@ export default function EmbedContactForm() {
   }
 
   return (
-    <div className="bg-black text-white p-4 md:p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="bg-black text-white p-3 md:p-4">
+      <div className="w-full max-w-6xl mx-auto">
         {/* Compact Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 mb-3">
-            <Camera className="w-6 h-6 text-black" />
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 mb-2">
+            <Camera className="w-5 h-5 text-black" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
+          <h1 className="text-xl md:text-2xl font-bold text-white">
             Jetzt anfragen
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">
+          <p className="text-zinc-500 text-xs mt-0.5">
             Füllen Sie das Formular aus und wir melden uns bei Ihnen
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Customer Type Toggle */}
-          <div className="space-y-2">
-            <Label className="text-zinc-400 text-xs uppercase tracking-wider">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Customer Type Toggle - Inline */}
+          <div className="flex items-center gap-3">
+            <Label className="text-zinc-400 text-xs uppercase tracking-wider whitespace-nowrap">
               Kundenart <span className="text-amber-500">*</span>
             </Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setCustomerType("privat")}
                 className={cn(
-                  "flex items-center justify-center gap-2 p-3 rounded-lg border transition-all",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs",
                   customerType === "privat"
                     ? "border-amber-500 bg-amber-500/10 text-white"
                     : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-700"
                 )}
               >
-                <User className="w-4 h-4" />
-                <span className="font-medium text-sm">Privat</span>
+                <User className="w-3.5 h-3.5" />
+                <span className="font-medium">Privat</span>
               </button>
               <button
                 type="button"
                 onClick={() => setCustomerType("firma")}
                 className={cn(
-                  "flex items-center justify-center gap-2 p-3 rounded-lg border transition-all",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs",
                   customerType === "firma"
                     ? "border-amber-500 bg-amber-500/10 text-white"
                     : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-700"
                 )}
               >
-                <Building2 className="w-4 h-4" />
-                <span className="font-medium text-sm">Firma</span>
+                <Building2 className="w-3.5 h-3.5" />
+                <span className="font-medium">Firma</span>
               </button>
             </div>
           </div>
@@ -275,16 +275,16 @@ export default function EmbedContactForm() {
             </div>
           )}
 
-          {/* Contact + Event in 2 Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Left Column - Contact */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <User className="w-4 h-4 text-amber-500" />
+          {/* All Fields in 3 Column Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Column 1 - Contact */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-amber-500" />
                 Kontaktdaten
               </h3>
               
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="space-y-1">
                   <Label htmlFor="name" className="text-zinc-400 text-xs">Name *</Label>
                   <div className="relative">
@@ -349,10 +349,10 @@ export default function EmbedContactForm() {
               </div>
             </div>
 
-            {/* Right Column - Event Details */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4 text-amber-500" />
+            {/* Column 2 - Event Details */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <CalendarIcon className="w-3.5 h-3.5 text-amber-500" />
                 Eventdetails
               </h3>
 
@@ -491,55 +491,59 @@ export default function EmbedContactForm() {
                 </div>
               </div>
             </div>
-          </div>
+            {/* Column 3 - Message & Referral */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
+                Details & Sonstiges
+              </h3>
 
-          {/* Message - Compact */}
-          <div className="space-y-1">
-            <Label htmlFor="message" className="text-zinc-400 text-xs flex items-center gap-1">
-              <MessageSquare className="w-3 h-3 text-amber-500" />
-              Nähere Details *
-            </Label>
-            <Textarea
-              id="message"
-              name="message"
-              rows={3}
-              required
-              maxLength={2000}
-              className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600 focus:border-amber-500 resize-none text-sm"
-              placeholder="Erzählen Sie uns mehr über Ihre Veranstaltung..."
-            />
-          </div>
+              {/* Message - Compact */}
+              <div className="space-y-1">
+                <Label htmlFor="message" className="text-zinc-400 text-xs">Nähere Details *</Label>
+                <Textarea
+                  id="message"
+                  name="message"
+                  rows={4}
+                  required
+                  maxLength={2000}
+                  className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600 focus:border-amber-500 resize-none text-sm"
+                  placeholder="Erzählen Sie uns mehr..."
+                />
+              </div>
 
-          {/* Referral Sources - Single Row */}
-          <div className="space-y-1.5">
-            <Label className="text-zinc-400 text-xs">Wie haben Sie uns gefunden?</Label>
-            <div className="flex flex-wrap gap-2">
-              {REFERRAL_OPTIONS.map((option) => (
-                <label
-                  key={option.id}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all text-xs",
-                    referralSources.includes(option.id)
-                      ? "border-amber-500/50 bg-amber-500/10 text-white"
-                      : "border-zinc-800 bg-zinc-900/30 text-zinc-400 hover:border-zinc-700"
-                  )}
-                >
-                  <Checkbox
-                    id={option.id}
-                    checked={referralSources.includes(option.id)}
-                    onCheckedChange={(checked) =>
-                      handleReferralChange(option.id, checked as boolean)
-                    }
-                    className="border-zinc-600 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 w-3 h-3"
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
+              {/* Referral Sources - Compact */}
+              <div className="space-y-1">
+                <Label className="text-zinc-400 text-xs">Wie haben Sie uns gefunden?</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {REFERRAL_OPTIONS.map((option) => (
+                    <label
+                      key={option.id}
+                      className={cn(
+                        "flex items-center gap-1 px-2 py-1 rounded-full border cursor-pointer transition-all text-[10px]",
+                        referralSources.includes(option.id)
+                          ? "border-amber-500/50 bg-amber-500/10 text-white"
+                          : "border-zinc-800 bg-zinc-900/30 text-zinc-400 hover:border-zinc-700"
+                      )}
+                    >
+                      <Checkbox
+                        id={option.id}
+                        checked={referralSources.includes(option.id)}
+                        onCheckedChange={(checked) =>
+                          handleReferralChange(option.id, checked as boolean)
+                        }
+                        className="border-zinc-600 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 w-2.5 h-2.5"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
           {error && (
-            <div className="text-red-400 text-xs text-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div className="text-red-400 text-xs text-center p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
               {error}
             </div>
           )}
@@ -548,7 +552,7 @@ export default function EmbedContactForm() {
             type="submit"
             size="lg"
             disabled={isSubmitting || rentalObjects.length === 0 || !eventType || !eventDate}
-            className="w-full h-11 text-sm font-semibold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black transition-all shadow-lg shadow-amber-500/20"
+            className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black transition-all shadow-lg shadow-amber-500/20"
           >
             {isSubmitting ? (
               <>
