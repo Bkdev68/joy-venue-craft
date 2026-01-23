@@ -45,14 +45,37 @@ const getSmtpClient = () => {
   });
 };
 
+const toAsciiSubject = (subject: string) => {
+  // Some clients showed raw MIME when non-ASCII symbols (e.g. ° / emoji) were present.
+  // Keep subject ASCII-only for maximum compatibility.
+  try {
+    return subject
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\x20-\x7E]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  } catch {
+    return subject.replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim();
+  }
+};
+
 const sendEmail = async (to: string, subject: string, html: string) => {
   const client = getSmtpClient();
   try {
     await client.send({
       from: "PixelPalast <buchung@pixelpalast.at>",
       to: to,
-      subject: subject,
-      html: html,
+      subject: toAsciiSubject(subject),
+      // Use explicit MIME parts to avoid clients showing raw multipart/quoted-printable source
+      // (we already minify HTML to reduce encoding artifacts)
+      mimeContent: [
+        {
+          mimeType: "text/html; charset=utf-8",
+          content: html,
+          transferEncoding: "quoted-printable",
+        },
+      ],
     });
     console.log(`Email sent successfully to ${to}`);
     return { success: true };
@@ -86,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Email to admin - minified to avoid encoding issues
     const adminHtml = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h1 style="color: #D4AF37; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">📩 Neue Anfrage über Embed-Formular</h1><h2 style="color: #333;">Event-Details</h2><table style="width: 100%; border-collapse: collapse;"><tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;"><strong>Datum:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${formattedDate}</td></tr>${data.eventTime ? `<tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>Uhrzeit:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${safeValue(data.eventTime)} Uhr</td></tr>` : ''}${data.duration ? `<tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;"><strong>Dauer:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${data.duration} Stunden</td></tr>` : ''}<tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>Event-Art:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${safeValue(data.eventType)}</td></tr><tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;"><strong>Gewünschte Leistung:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${safeValue(data.serviceName)}</td></tr>${data.venue ? `<tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>Veranstaltungsort:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${safeValue(data.venue)}</td></tr>` : ''}</table><h2 style="color: #333; margin-top: 20px;">Kontaktdaten</h2><table style="width: 100%; border-collapse: collapse;"><tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;"><strong>Kundentyp:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${data.customerType === 'firma' ? 'Firmenkunde' : 'Privatkunde'}</td></tr><tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>Name:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${safeValue(data.customerName)}</td></tr>${data.companyName ? `<tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;"><strong>Firma:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${safeValue(data.companyName)}</td></tr>` : ''}<tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>E-Mail:</strong></td><td style="padding: 10px; border: 1px solid #ddd;"><a href="mailto:${safeValue(data.customerEmail)}">${safeValue(data.customerEmail)}</a></td></tr>${data.customerPhone ? `<tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;"><strong>Telefon:</strong></td><td style="padding: 10px; border: 1px solid #ddd;"><a href="tel:${data.customerPhone}">${data.customerPhone}</a></td></tr>` : ''}${data.companyStreet ? `<tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>Adresse:</strong></td><td style="padding: 10px; border: 1px solid #ddd;">${safeValue(data.companyStreet)}<br>${safeValue(data.companyZip)} ${safeValue(data.companyCity)}<br>${safeValue(data.companyCountry)}</td></tr>` : ''}</table>${data.message ? `<h2 style="color: #333; margin-top: 20px;">Nachricht</h2><div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 4px solid #D4AF37;">${data.message.replace(/\n/g, '<br>')}</div>` : ''}${data.referralSources && data.referralSources.length > 0 ? `<h2 style="color: #333; margin-top: 20px;">Wie hat der Kunde uns gefunden?</h2><div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px;">${data.referralSources.join(', ')}</div>` : ''}<div style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 5px;"><strong>💡 Nächste Schritte:</strong><br>Diese Anfrage wurde automatisch in den Buchungen gespeichert. Bitte kontaktieren Sie den Kunden zeitnah.</div><p style="color: #666; margin-top: 30px; font-size: 12px;">Diese E-Mail wurde automatisch über das Embed-Kontaktformular gesendet.</p></div>`;
 
-    await sendEmail(adminEmail, `📩 Neue Embed-Anfrage: ${data.serviceName} - ${data.customerName}`, adminHtml);
+    await sendEmail(adminEmail, `Neue Embed-Anfrage: ${data.serviceName} - ${data.customerName}`, adminHtml);
     console.log("Admin notification email sent");
 
     // Confirmation email to customer - minified to avoid encoding issues
