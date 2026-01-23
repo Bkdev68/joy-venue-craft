@@ -104,6 +104,48 @@ export type Database = {
           },
         ]
       }
+      contact_submissions: {
+        Row: {
+          created_at: string
+          email: string
+          event_date: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          name: string
+          phone: string | null
+          source: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          event_date?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          name: string
+          phone?: string | null
+          source?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          event_date?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          name?: string
+          phone?: string | null
+          source?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           created_at: string

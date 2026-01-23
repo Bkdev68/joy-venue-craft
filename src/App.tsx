@@ -39,6 +39,7 @@ import AdminLeistungen from "./pages/admin/AdminLeistungen";
 import AdminPreise from "./pages/admin/AdminPreise";
 import AdminKontakt from "./pages/admin/AdminKontakt";
 import AdminKalender from "./pages/admin/AdminKalender";
+import EmbedContactForm from "./pages/Embed/ContactForm";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="/faq" element={<FAQ />} />
               <Route path="/impressum" element={<Impressum />} />
               <Route path="/datenschutz" element={<Datenschutz />} />
+              <Route path="/embed/contact" element={<EmbedContactForm />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/reset-password" element={<AdminResetPassword />} />
               <Route path="/admin" element={<AdminLayout />}>
