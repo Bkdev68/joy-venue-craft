@@ -30,8 +30,12 @@ import {
   Eye,
   Camera,
   Loader2,
-  Calculator
+  Calculator,
+  Sparkles,
+  Copy,
+  Check
 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -123,6 +127,14 @@ export default function AdminBookings() {
   const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState<string | null>(null);
   const [emailPreviewBooking, setEmailPreviewBooking] = useState<Booking | null>(null);
   const [analyzingImage, setAnalyzingImage] = useState(false);
+  
+  // AI Response states
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiType, setAiType] = useState<'offer' | 'email'>('offer');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiContent, setAiContent] = useState('');
+  const [aiBooking, setAiBooking] = useState<Booking | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [form, setForm] = useState({
     date: undefined as Date | undefined,
@@ -532,6 +544,79 @@ export default function AdminBookings() {
     link.href = URL.createObjectURL(blob);
     link.download = `buchungen_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
+  };
+
+  // Generate AI offer or email response
+  const generateAIResponse = async (booking: Booking, type: 'offer' | 'email') => {
+    setAiBooking(booking);
+    setAiType(type);
+    setAiContent('');
+    setAiDialogOpen(true);
+    setAiLoading(true);
+    setCopied(false);
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-ai-response`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          booking: {
+            customer_name: booking.customer_name,
+            customer_email: booking.customer_email,
+            customer_phone: booking.customer_phone,
+            customer_type: booking.customer_type,
+            company_name: booking.company_name,
+            date: booking.date,
+            event_type: booking.event_type,
+            event_time: booking.event_time,
+            duration_hours: booking.duration_hours,
+            venue: booking.venue,
+            service_name: booking.service_name,
+            package_name: booking.package_name,
+            package_price: booking.package_price,
+            message: booking.message,
+            referral_sources: booking.referral_sources,
+          },
+          type,
+          calculatedPrice: booking.package_price,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Fehler beim Generieren');
+      }
+
+      if (result.success && result.content) {
+        setAiContent(result.content);
+      } else {
+        throw new Error(result.error || 'Keine Antwort erhalten');
+      }
+    } catch (error: any) {
+      console.error('Error generating AI response:', error);
+      toast.error('Fehler: ' + (error.message || 'Unbekannter Fehler'));
+      setAiDialogOpen(false);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(aiContent);
+      setCopied(true);
+      toast.success('In Zwischenablage kopiert');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast.error('Kopieren fehlgeschlagen');
+    }
   };
 
   if (loading) {
@@ -1163,6 +1248,31 @@ export default function AdminBookings() {
                 )}
               </div>
 
+              {/* AI Actions */}
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" /> KI-Assistent
+                </h4>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => generateAIResponse(viewingBooking, 'offer')}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Angebot erstellen
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => generateAIResponse(viewingBooking, 'email')}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Antwort erstellen
+                  </Button>
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <Button onClick={() => handleEdit(viewingBooking)} className="flex-1">
                   <Edit className="h-4 w-4 mr-2" />
@@ -1236,6 +1346,70 @@ export default function AdminBookings() {
                 </Button>
                 <Button variant="outline" onClick={() => setEmailPreviewBooking(null)}>
                   Abbrechen
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Response Dialog */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              {aiType === 'offer' ? 'KI-generiertes Angebot' : 'KI-generierte Antwort'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {aiLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">
+                {aiType === 'offer' ? 'Erstelle personalisiertes Angebot...' : 'Erstelle professionelle Antwort...'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {aiBooking && (
+                <div className="bg-muted/50 p-3 rounded-lg text-sm">
+                  <p className="font-medium">{aiBooking.customer_name}</p>
+                  <p className="text-muted-foreground">
+                    {aiBooking.event_type} • {format(new Date(aiBooking.date), 'PPP', { locale: de })}
+                  </p>
+                </div>
+              )}
+              
+              <ScrollArea className="h-[400px] rounded-lg border">
+                <div className="p-4 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                  {aiContent}
+                </div>
+              </ScrollArea>
+              
+              <div className="flex gap-2">
+                <Button onClick={copyToClipboard} className="flex-1">
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Kopiert!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 mr-2" />
+                      In Zwischenablage kopieren
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => aiBooking && generateAIResponse(aiBooking, aiType)}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Neu generieren
+                </Button>
+                <Button variant="outline" onClick={() => setAiDialogOpen(false)}>
+                  Schließen
                 </Button>
               </div>
             </div>
