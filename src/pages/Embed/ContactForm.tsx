@@ -421,7 +421,7 @@ export default function EmbedContactForm() {
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-700" align="start">
+                    <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-700 z-50" align="start">
                       <Calendar
                         mode="single"
                         selected={eventDate}
@@ -429,6 +429,7 @@ export default function EmbedContactForm() {
                         disabled={(date) => date < new Date()}
                         initialFocus
                         locale={de}
+                        className="pointer-events-auto [&_.rdp-day]:text-white [&_.rdp-head_cell]:text-zinc-400 [&_.rdp-caption_label]:text-white [&_.rdp-nav_button]:text-white [&_.rdp-day_selected]:bg-amber-500 [&_.rdp-day_selected]:text-black [&_.rdp-day_today]:bg-zinc-700 [&_.rdp-day_outside]:text-zinc-600 [&_.rdp-button:hover]:bg-zinc-700"
                       />
                     </PopoverContent>
                   </Popover>
