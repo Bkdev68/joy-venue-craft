@@ -107,42 +107,60 @@ export type Database = {
       contact_submissions: {
         Row: {
           created_at: string
+          duration_hours: number | null
           email: string
           event_date: string | null
+          event_time: string | null
+          event_type: string | null
           id: string
           is_read: boolean | null
           message: string
           name: string
           phone: string | null
+          referral_sources: string[] | null
+          rental_object: string | null
           source: string
           subject: string | null
           updated_at: string
+          venue: string | null
         }
         Insert: {
           created_at?: string
+          duration_hours?: number | null
           email: string
           event_date?: string | null
+          event_time?: string | null
+          event_type?: string | null
           id?: string
           is_read?: boolean | null
           message: string
           name: string
           phone?: string | null
+          referral_sources?: string[] | null
+          rental_object?: string | null
           source?: string
           subject?: string | null
           updated_at?: string
+          venue?: string | null
         }
         Update: {
           created_at?: string
+          duration_hours?: number | null
           email?: string
           event_date?: string | null
+          event_time?: string | null
+          event_type?: string | null
           id?: string
           is_read?: boolean | null
           message?: string
           name?: string
           phone?: string | null
+          referral_sources?: string[] | null
+          rental_object?: string | null
           source?: string
           subject?: string | null
           updated_at?: string
+          venue?: string | null
         }
         Relationships: []
       }
