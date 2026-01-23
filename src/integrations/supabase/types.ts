@@ -106,7 +106,13 @@ export type Database = {
       }
       contact_submissions: {
         Row: {
+          company_city: string | null
+          company_country: string | null
+          company_name: string | null
+          company_street: string | null
+          company_zip: string | null
           created_at: string
+          customer_type: string | null
           duration_hours: number | null
           email: string
           event_date: string | null
@@ -125,7 +131,13 @@ export type Database = {
           venue: string | null
         }
         Insert: {
+          company_city?: string | null
+          company_country?: string | null
+          company_name?: string | null
+          company_street?: string | null
+          company_zip?: string | null
           created_at?: string
+          customer_type?: string | null
           duration_hours?: number | null
           email: string
           event_date?: string | null
@@ -144,7 +156,13 @@ export type Database = {
           venue?: string | null
         }
         Update: {
+          company_city?: string | null
+          company_country?: string | null
+          company_name?: string | null
+          company_street?: string | null
+          company_zip?: string | null
           created_at?: string
+          customer_type?: string | null
           duration_hours?: number | null
           email?: string
           event_date?: string | null
