@@ -61,6 +61,17 @@ interface Booking {
   created_at: string;
   updated_at: string;
   invoice?: Invoice | null;
+  // New fields from embed form
+  venue?: string | null;
+  event_time?: string | null;
+  duration_hours?: number | null;
+  referral_sources?: string[] | null;
+  customer_type?: string | null;
+  company_name?: string | null;
+  company_street?: string | null;
+  company_zip?: string | null;
+  company_city?: string | null;
+  company_country?: string | null;
 }
 
 interface Service {
@@ -992,6 +1003,26 @@ export default function AdminBookings() {
                   <p className="text-sm text-muted-foreground">Event-Art</p>
                   <p className="font-medium">{viewingBooking.event_type}</p>
                 </div>
+                {viewingBooking.event_time && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> Uhrzeit
+                    </p>
+                    <p className="font-medium">{viewingBooking.event_time} Uhr</p>
+                  </div>
+                )}
+                {viewingBooking.duration_hours && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Dauer</p>
+                    <p className="font-medium">{viewingBooking.duration_hours} Stunden</p>
+                  </div>
+                )}
+                {viewingBooking.venue && (
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-sm text-muted-foreground">Veranstaltungsort</p>
+                    <p className="font-medium">{viewingBooking.venue}</p>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Service</p>
                   <p className="font-medium">{viewingBooking.service_name}</p>
@@ -1011,10 +1042,20 @@ export default function AdminBookings() {
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-3">Kundendaten</h4>
                 <div className="space-y-2">
+                  {viewingBooking.customer_type && (
+                    <p className="text-sm text-muted-foreground">
+                      Kundentyp: <span className="text-foreground font-medium">{viewingBooking.customer_type === 'firma' ? 'Firmenkunde' : 'Privatkunde'}</span>
+                    </p>
+                  )}
                   <p className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     {viewingBooking.customer_name}
                   </p>
+                  {viewingBooking.company_name && (
+                    <p className="flex items-center gap-2 text-muted-foreground">
+                      <span className="ml-6">Firma: {viewingBooking.company_name}</span>
+                    </p>
+                  )}
                   <p className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <a href={`mailto:${viewingBooking.customer_email}`} className="text-primary hover:underline">
@@ -1029,15 +1070,32 @@ export default function AdminBookings() {
                       </a>
                     </p>
                   )}
+                  {viewingBooking.company_street && (
+                    <p className="text-sm text-muted-foreground ml-6">
+                      {viewingBooking.company_street}, {viewingBooking.company_zip} {viewingBooking.company_city}
+                      {viewingBooking.company_country && `, ${viewingBooking.company_country}`}
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {viewingBooking.referral_sources && viewingBooking.referral_sources.length > 0 && (
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-2">Gefunden über</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {viewingBooking.referral_sources.map((source, idx) => (
+                      <Badge key={idx} variant="secondary">{source}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {viewingBooking.message && (
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Nachricht
                   </h4>
-                  <p className="text-muted-foreground bg-muted p-3 rounded-lg text-sm">
+                  <p className="text-muted-foreground bg-muted p-3 rounded-lg text-sm whitespace-pre-wrap">
                     {viewingBooking.message}
                   </p>
                 </div>

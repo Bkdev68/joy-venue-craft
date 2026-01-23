@@ -23,21 +23,31 @@ export type Database = {
           billing_street: string | null
           billing_vat_id: string | null
           billing_zip: string | null
+          company_city: string | null
+          company_country: string | null
+          company_name: string | null
+          company_street: string | null
+          company_zip: string | null
           created_at: string
           customer_email: string
           customer_name: string
           customer_phone: string | null
+          customer_type: string | null
           date: string
+          duration_hours: number | null
+          event_time: string | null
           event_type: string
           id: string
           message: string | null
           package_id: string | null
           package_name: string
           package_price: number
+          referral_sources: string[] | null
           service_id: string | null
           service_name: string
           status: string
           updated_at: string
+          venue: string | null
         }
         Insert: {
           billing_city?: string | null
@@ -47,21 +57,31 @@ export type Database = {
           billing_street?: string | null
           billing_vat_id?: string | null
           billing_zip?: string | null
+          company_city?: string | null
+          company_country?: string | null
+          company_name?: string | null
+          company_street?: string | null
+          company_zip?: string | null
           created_at?: string
           customer_email: string
           customer_name: string
           customer_phone?: string | null
+          customer_type?: string | null
           date: string
+          duration_hours?: number | null
+          event_time?: string | null
           event_type: string
           id?: string
           message?: string | null
           package_id?: string | null
           package_name: string
           package_price: number
+          referral_sources?: string[] | null
           service_id?: string | null
           service_name: string
           status?: string
           updated_at?: string
+          venue?: string | null
         }
         Update: {
           billing_city?: string | null
@@ -71,21 +91,31 @@ export type Database = {
           billing_street?: string | null
           billing_vat_id?: string | null
           billing_zip?: string | null
+          company_city?: string | null
+          company_country?: string | null
+          company_name?: string | null
+          company_street?: string | null
+          company_zip?: string | null
           created_at?: string
           customer_email?: string
           customer_name?: string
           customer_phone?: string | null
+          customer_type?: string | null
           date?: string
+          duration_hours?: number | null
+          event_time?: string | null
           event_type?: string
           id?: string
           message?: string | null
           package_id?: string | null
           package_name?: string
           package_price?: number
+          referral_sources?: string[] | null
           service_id?: string | null
           service_name?: string
           status?: string
           updated_at?: string
+          venue?: string | null
         }
         Relationships: [
           {

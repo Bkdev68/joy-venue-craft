@@ -149,7 +149,7 @@ export default function EmbedContactForm() {
     const duration = parseInt(formData.get("duration") as string) || 0;
     const messageText = formData.get("message") as string;
     
-    // Create booking data
+    // Create booking data - save to proper columns
     const bookingData = {
       customer_name: formData.get("name") as string,
       customer_email: formData.get("email") as string,
@@ -160,7 +160,19 @@ export default function EmbedContactForm() {
       package_name: `Anfrage (${duration}h)`,
       package_price: 0, // Price to be determined
       status: "pending",
-      message: `Veranstaltungsort: ${venue}\nUhrzeit: ${eventHour}:${eventMinute} Uhr\nDauer: ${duration} Stunden\n\n${messageText}${referralSources.length > 0 ? `\n\nGefunden über: ${referralSources.join(", ")}` : ""}`,
+      // Proper columns for event details
+      venue: venue,
+      event_time: `${eventHour}:${eventMinute}`,
+      duration_hours: duration,
+      message: messageText || null,
+      referral_sources: referralSources.length > 0 ? referralSources : null,
+      customer_type: customerType,
+      // Company data for company customers
+      company_name: customerType === "firma" ? formData.get("company_name") as string : null,
+      company_street: customerType === "firma" ? formData.get("company_street") as string : null,
+      company_zip: customerType === "firma" ? formData.get("company_zip") as string : null,
+      company_city: customerType === "firma" ? formData.get("company_city") as string : null,
+      company_country: customerType === "firma" ? (formData.get("company_country") as string || "Österreich") : null,
       // Billing data for company customers
       billing_company: customerType === "firma" ? formData.get("company_name") as string : null,
       billing_name: formData.get("name") as string,
