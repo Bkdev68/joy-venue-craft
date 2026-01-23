@@ -85,10 +85,20 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Du bist ein Assistent zur Analyse von Buchungsanfragen aus Screenshots, E-Mails oder Fotos. Extrahiere die folgenden Informationen:
-- Kundenname (customer_name)
-- E-Mail-Adresse (customer_email)
-- Telefonnummer (customer_phone) - falls vorhanden
+            content: `Du bist ein Assistent zur Analyse von Buchungsanfragen aus Screenshots, E-Mails oder PDFs. 
+
+WICHTIG - Unterscheide genau zwischen:
+- KUNDE/ABSENDER: Die Person, die die Buchungsanfrage stellt (deren Daten brauchst du!)
+- EMPFÄNGER/FIRMA: Das Unternehmen, das die Anfrage erhält (z.B. Pixelpalast, office@pixelpalast.at - NICHT der Kunde!)
+
+Bei E-Mail-Screenshots:
+- Der KUNDE ist der ABSENDER (Von:/From:) - extrahiere dessen Name und E-Mail
+- IGNORIERE die Empfänger-Adresse (An:/To:) - das ist die Firma
+
+Extrahiere diese Informationen vom KUNDEN (Absender):
+- Kundenname (customer_name) - Name des Absenders/Anfragenden
+- E-Mail-Adresse (customer_email) - E-Mail des Absenders/Anfragenden
+- Telefonnummer (customer_phone) - falls im Text genannt
 - Art des Events aus: Hochzeit, Firmenevent, Geburtstag, Weihnachtsfeier, Jubiläum, Messe/Promotion, Sonstiges (event_type)
 - Datum des Events im Format YYYY-MM-DD (date)
 - Service/Leistung z.B. Photo Booth, 360° Video Booth, Audio Gästebuch (service_name)
@@ -103,7 +113,7 @@ Antworte NUR mit einem JSON-Objekt ohne Markdown-Formatierung. Wenn ein Feld nic
             content: [
               {
                 type: "text",
-                text: "Analysiere dieses Bild und extrahiere alle Buchungsinformationen. Antworte nur mit dem JSON-Objekt."
+                text: "Analysiere dieses Dokument und extrahiere die KUNDENDATEN (Absender der Anfrage, NICHT die Empfänger-Firma). Antworte nur mit dem JSON-Objekt."
               },
               {
                 type: "image_url",
