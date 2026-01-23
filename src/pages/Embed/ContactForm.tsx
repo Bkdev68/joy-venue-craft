@@ -400,8 +400,8 @@ export default function EmbedContactForm() {
                 </Select>
               </div>
 
-              {/* Date, Time, Duration in one row */}
-              <div className="grid grid-cols-3 gap-2">
+              {/* Date, Time, Duration - stacked on mobile, row on sm+ */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-2">
                 <div className="space-y-1">
                   <Label className="text-zinc-400 text-xs">Datum *</Label>
                   <Popover>
@@ -409,15 +409,15 @@ export default function EmbedContactForm() {
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full h-9 justify-start text-left font-normal bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-sm px-2",
+                          "w-full h-9 justify-start text-left font-normal bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-sm px-3",
                           !eventDate && "text-zinc-600"
                         )}
                       >
-                        <CalendarIcon className="mr-1 h-3 w-3 text-zinc-500 shrink-0" />
+                        <CalendarIcon className="mr-2 h-4 w-4 text-zinc-500 shrink-0" />
                         {eventDate ? (
-                          <span className="text-white truncate">{format(eventDate, "dd.MM.yy", { locale: de })}</span>
+                          <span className="text-white">{format(eventDate, "dd.MM.yyyy", { locale: de })}</span>
                         ) : (
-                          <span className="truncate">Wählen</span>
+                          <span>Datum wählen</span>
                         )}
                       </Button>
                     </PopoverTrigger>
@@ -429,7 +429,29 @@ export default function EmbedContactForm() {
                         disabled={(date) => date < new Date()}
                         initialFocus
                         locale={de}
-                        className="pointer-events-auto [&_.rdp-day]:text-white [&_.rdp-head_cell]:text-zinc-400 [&_.rdp-caption_label]:text-white [&_.rdp-nav_button]:text-white [&_.rdp-day_selected]:bg-amber-500 [&_.rdp-day_selected]:text-black [&_.rdp-day_today]:bg-zinc-700 [&_.rdp-day_outside]:text-zinc-600 [&_.rdp-button:hover]:bg-zinc-700"
+                        className="pointer-events-auto p-3"
+                        classNames={{
+                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                          month: "space-y-4",
+                          caption: "flex justify-center pt-1 relative items-center",
+                          caption_label: "text-sm font-medium text-white",
+                          nav: "space-x-1 flex items-center",
+                          nav_button: "h-7 w-7 bg-transparent p-0 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-md inline-flex items-center justify-center",
+                          nav_button_previous: "absolute left-1",
+                          nav_button_next: "absolute right-1",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "flex",
+                          head_cell: "text-zinc-400 rounded-md w-9 font-normal text-[0.8rem]",
+                          row: "flex w-full mt-2",
+                          cell: "h-9 w-9 text-center text-sm p-0 relative",
+                          day: "h-9 w-9 p-0 font-normal text-white hover:bg-zinc-700 rounded-md inline-flex items-center justify-center",
+                          day_range_end: "day-range-end",
+                          day_selected: "bg-amber-500 text-black hover:bg-amber-600 hover:text-black focus:bg-amber-500 focus:text-black",
+                          day_today: "bg-zinc-700 text-white",
+                          day_outside: "text-zinc-600 opacity-50",
+                          day_disabled: "text-zinc-600 opacity-50",
+                          day_hidden: "invisible",
+                        }}
                       />
                     </PopoverContent>
                   </Popover>
@@ -437,12 +459,12 @@ export default function EmbedContactForm() {
 
                 <div className="space-y-1">
                   <Label className="text-zinc-400 text-xs">Uhrzeit *</Label>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <Select value={eventHour} onValueChange={setEventHour}>
-                      <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white focus:border-amber-500 h-9 text-sm px-2">
+                      <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white focus:border-amber-500 h-9 text-sm px-3 flex-1">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-700 max-h-48">
+                      <SelectContent className="bg-zinc-900 border-zinc-700 max-h-48 z-50">
                         {HOURS.map((hour) => (
                           <SelectItem 
                             key={hour} 
@@ -454,12 +476,12 @@ export default function EmbedContactForm() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <span className="text-zinc-500 text-sm">:</span>
+                    <span className="text-zinc-500 text-sm font-medium">:</span>
                     <Select value={eventMinute} onValueChange={setEventMinute}>
-                      <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white focus:border-amber-500 h-9 text-sm px-2 w-14">
+                      <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white focus:border-amber-500 h-9 text-sm px-3 flex-1">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-700">
+                      <SelectContent className="bg-zinc-900 border-zinc-700 z-50">
                         {MINUTES.map((min) => (
                           <SelectItem 
                             key={min} 
@@ -471,13 +493,14 @@ export default function EmbedContactForm() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <span className="text-zinc-500 text-xs">Uhr</span>
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <Label htmlFor="duration" className="text-zinc-400 text-xs">Dauer (Std) *</Label>
                   <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <Input
                       id="duration"
                       name="duration"
@@ -485,8 +508,8 @@ export default function EmbedContactForm() {
                       min={1}
                       max={24}
                       required
-                      placeholder="3"
-                      className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600 focus:border-amber-500 pl-7 h-9 text-sm"
+                      placeholder="z.B. 3"
+                      className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600 focus:border-amber-500 pl-10 h-9 text-sm"
                     />
                   </div>
                 </div>
