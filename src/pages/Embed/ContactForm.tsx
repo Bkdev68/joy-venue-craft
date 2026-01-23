@@ -193,7 +193,7 @@ export default function EmbedContactForm() {
   }
 
   return (
-    <div ref={containerRef} className="text-white p-4 md:p-6" style={{ backgroundColor: '#0C0C0B' }}>
+    <div ref={containerRef} className="w-full min-w-full text-white p-4 md:p-6" style={{ backgroundColor: '#0C0C0B' }}>
       <div className="max-w-4xl mx-auto">
         {/* Compact Header */}
         <div className="text-center mb-6">
