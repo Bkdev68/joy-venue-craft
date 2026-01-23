@@ -310,8 +310,8 @@ export default function EmbedContactForm() {
             </div>
           )}
 
-          {/* Contact + Event in 2 Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Contact + Event in Single Column Layout */}
+          <div className="space-y-5">
             {/* Left Column - Contact */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
