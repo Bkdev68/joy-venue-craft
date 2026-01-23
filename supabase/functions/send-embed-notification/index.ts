@@ -52,13 +52,7 @@ const sendEmail = async (to: string, subject: string, html: string) => {
       from: "PixelPalast <buchung@pixelpalast.at>",
       to: to,
       subject: subject,
-      mimeContent: [
-        {
-          mimeType: "text/html; charset=utf-8",
-          content: html,
-          transferEncoding: "quoted-printable",
-        },
-      ],
+      html: html,
     });
     console.log(`Email sent successfully to ${to}`);
     return { success: true };
