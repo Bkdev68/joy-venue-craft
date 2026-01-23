@@ -22,7 +22,8 @@ import {
   Menu,
   X,
   Calculator,
-  Inbox
+  Inbox,
+  Euro
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
@@ -46,6 +47,7 @@ const navItems = [
   { href: '/admin/faq', icon: HelpCircle, label: 'FAQ' },
   { href: '/admin/inhalte', icon: FileText, label: 'Sonstige Inhalte' },
   { type: 'divider', label: 'System' },
+  { href: '/admin/preiseinstellungen', icon: Euro, label: 'Preiseinstellungen' },
   { href: '/admin/einstellungen', icon: Settings, label: 'Einstellungen' },
 ];
 

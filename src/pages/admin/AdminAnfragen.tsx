@@ -42,11 +42,19 @@ import {
   Circle,
   Filter,
   Inbox,
-  MessageSquare
+  MessageSquare,
+  Calculator,
+  Sparkles,
+  Copy,
+  Check,
+  Send,
+  Loader2,
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { PriceCalculator } from '@/components/admin/PriceCalculator';
 
 type ContactSubmission = {
   id: string;
@@ -80,6 +88,17 @@ export default function AdminAnfragen() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterRead, setFilterRead] = useState<string>('all');
   const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
+  
+  // AI Response states
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiType, setAiType] = useState<'offer' | 'email'>('offer');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiContent, setAiContent] = useState('');
+  const [aiSubmission, setAiSubmission] = useState<ContactSubmission | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [sendingAiEmail, setSendingAiEmail] = useState(false);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
+  const [showPriceCalculator, setShowPriceCalculator] = useState(false);
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['contact-submissions'],
@@ -145,6 +164,125 @@ export default function AdminAnfragen() {
       audioguestbook: 'Audio Gästebuch',
     };
     return obj.split(', ').map(o => labels[o.trim()] || o).join(', ');
+  };
+
+  // Generate AI offer or email response
+  const generateAIResponse = async (submission: ContactSubmission, type: 'offer' | 'email') => {
+    setAiSubmission(submission);
+    setAiType(type);
+    setAiContent('');
+    setAiDialogOpen(true);
+    setAiLoading(true);
+    setCopied(false);
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-ai-response`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          booking: {
+            customer_name: submission.name,
+            customer_email: submission.email,
+            customer_phone: submission.phone,
+            customer_type: submission.customer_type,
+            company_name: submission.company_name,
+            date: submission.event_date,
+            event_type: submission.event_type,
+            event_time: submission.event_time,
+            duration_hours: submission.duration_hours,
+            venue: submission.venue,
+            service_name: submission.rental_object ? getRentalObjectLabel(submission.rental_object) : 'Nicht angegeben',
+            package_name: 'Anfrage',
+            package_price: calculatedPrice || 0,
+            message: submission.message,
+            referral_sources: submission.referral_sources,
+          },
+          type,
+          calculatedPrice: calculatedPrice || undefined,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Fehler beim Generieren');
+      }
+
+      if (result.success && result.content) {
+        setAiContent(result.content);
+      } else {
+        throw new Error(result.error || 'Keine Antwort erhalten');
+      }
+    } catch (error: any) {
+      console.error('Error generating AI response:', error);
+      toast.error('Fehler: ' + (error.message || 'Unbekannter Fehler'));
+      setAiDialogOpen(false);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(aiContent);
+      setCopied(true);
+      toast.success('In Zwischenablage kopiert');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast.error('Kopieren fehlgeschlagen');
+    }
+  };
+
+  // Send AI-generated content via email
+  const sendAIEmail = async () => {
+    if (!aiSubmission || !aiContent) return;
+    
+    setSendingAiEmail(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-ai-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          to: aiSubmission.email,
+          customerName: aiSubmission.name,
+          content: aiContent,
+          type: aiType,
+          eventType: aiSubmission.event_type,
+          eventDate: aiSubmission.event_date,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Fehler beim Senden');
+      }
+
+      toast.success(`${aiType === 'offer' ? 'Angebot' : 'Antwort'} an ${aiSubmission.email} gesendet!`);
+      setAiDialogOpen(false);
+      
+      // Mark as read after sending response
+      if (!aiSubmission.is_read) {
+        markAsReadMutation.mutate({ id: aiSubmission.id, is_read: true });
+      }
+    } catch (error: any) {
+      console.error('Error sending AI email:', error);
+      toast.error('Fehler beim Senden: ' + (error.message || 'Unbekannter Fehler'));
+    } finally {
+      setSendingAiEmail(false);
+    }
   };
 
   return (
@@ -327,7 +465,7 @@ export default function AdminAnfragen() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Anfrage Details</DialogTitle>
           </DialogHeader>
@@ -454,6 +592,35 @@ export default function AdminAnfragen() {
                 </div>
               </div>
 
+              {/* Price Calculator */}
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Calculator className="h-4 w-4" />
+                    Preiskalkulation
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPriceCalculator(!showPriceCalculator)}
+                  >
+                    {showPriceCalculator ? 'Ausblenden' : 'Preis berechnen'}
+                  </Button>
+                </div>
+                {showPriceCalculator && (
+                  <PriceCalculator
+                    compact={false}
+                    initialHours={selectedSubmission.duration_hours || undefined}
+                    onPriceCalculated={(price) => setCalculatedPrice(price)}
+                  />
+                )}
+                {calculatedPrice > 0 && (
+                  <div className="flex items-center gap-2 text-lg font-semibold text-primary">
+                    Kalkulierter Preis: €{calculatedPrice.toLocaleString('de-DE')}
+                  </div>
+                )}
+              </div>
+
               {/* Meta Info */}
               <div className="flex justify-between items-center text-sm text-muted-foreground border-t pt-4">
                 <div>
@@ -465,7 +632,7 @@ export default function AdminAnfragen() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 border-t pt-4">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -482,24 +649,104 @@ export default function AdminAnfragen() {
                   {selectedSubmission.is_read ? (
                     <>
                       <Circle className="h-4 w-4 mr-2" />
-                      Als ungelesen markieren
+                      Als ungelesen
                     </>
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Als gelesen markieren
+                      Als gelesen
                     </>
                   )}
                 </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => generateAIResponse(selectedSubmission, 'offer')}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Angebot erstellen
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => generateAIResponse(selectedSubmission, 'email')}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Antwort generieren
+                </Button>
+                
                 <Button asChild>
                   <a href={`mailto:${selectedSubmission.email}`}>
                     <Mail className="h-4 w-4 mr-2" />
-                    Antworten
+                    E-Mail öffnen
                   </a>
                 </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Response Dialog */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              {aiType === 'offer' ? 'Angebot erstellen' : 'Antwort generieren'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {aiLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">KI generiert {aiType === 'offer' ? 'Angebot' : 'Antwort'}...</p>
+            </div>
+          ) : aiContent ? (
+            <div className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4 whitespace-pre-wrap text-sm font-mono max-h-[50vh] overflow-y-auto">
+                {aiContent}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={copyToClipboard}
+                  className="flex-1"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Kopiert!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Kopieren
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  onClick={sendAIEmail}
+                  disabled={sendingAiEmail}
+                  className="flex-1"
+                >
+                  {sendingAiEmail ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Senden...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      An {aiSubmission?.email} senden
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </AdminPageWrapper>
