@@ -127,31 +127,53 @@ export default function EmbedContactForm() {
 
     const formData = new FormData(e.currentTarget);
     
-    const data = {
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      venue: formData.get("venue") as string,
-      rental_object: rentalObjects.join(", "),
-      event_type: eventType,
-      event_date: eventDate ? format(eventDate, "yyyy-MM-dd") : null,
-      event_time: `${eventHour}:${eventMinute}`,
-      duration_hours: parseInt(formData.get("duration") as string) || null,
-      message: formData.get("message") as string,
-      referral_sources: referralSources.length > 0 ? referralSources : null,
-      source: "embed",
-      customer_type: customerType,
-      company_name: customerType === "firma" ? formData.get("company_name") as string : null,
-      company_street: customerType === "firma" ? formData.get("company_street") as string : null,
-      company_zip: customerType === "firma" ? formData.get("company_zip") as string : null,
-      company_city: customerType === "firma" ? formData.get("company_city") as string : null,
-      company_country: customerType === "firma" ? formData.get("company_country") as string : null,
+    // Map rental objects to readable service name
+    const serviceNameMap: Record<string, string> = {
+      photobooth: "Photo Booth",
+      videobooth360: "360° Video Booth",
+      audioguestbook: "Audio Gästebuch",
+    };
+    const serviceName = rentalObjects.map(r => serviceNameMap[r] || r).join(", ");
+    
+    // Map event type to readable label
+    const eventTypeMap: Record<string, string> = {
+      hochzeit: "Hochzeit",
+      firmenfeier: "Firmenfeier",
+      geburtstag: "Geburtstag",
+      messe: "Messe / Event",
+      sonstiges: "Sonstiges",
+    };
+    const eventTypeLabel = eventTypeMap[eventType] || eventType;
+    
+    const venue = formData.get("venue") as string;
+    const duration = parseInt(formData.get("duration") as string) || 0;
+    const messageText = formData.get("message") as string;
+    
+    // Create booking data
+    const bookingData = {
+      customer_name: formData.get("name") as string,
+      customer_email: formData.get("email") as string,
+      customer_phone: formData.get("phone") as string,
+      date: eventDate ? format(eventDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+      event_type: eventTypeLabel,
+      service_name: serviceName,
+      package_name: `Anfrage (${duration}h)`,
+      package_price: 0, // Price to be determined
+      status: "pending",
+      message: `Veranstaltungsort: ${venue}\nUhrzeit: ${eventHour}:${eventMinute} Uhr\nDauer: ${duration} Stunden\n\n${messageText}${referralSources.length > 0 ? `\n\nGefunden über: ${referralSources.join(", ")}` : ""}`,
+      // Billing data for company customers
+      billing_company: customerType === "firma" ? formData.get("company_name") as string : null,
+      billing_name: formData.get("name") as string,
+      billing_street: customerType === "firma" ? formData.get("company_street") as string : null,
+      billing_zip: customerType === "firma" ? formData.get("company_zip") as string : null,
+      billing_city: customerType === "firma" ? formData.get("company_city") as string : null,
+      billing_country: customerType === "firma" ? (formData.get("company_country") as string || "Österreich") : "Österreich",
     };
 
     try {
       const { error: submitError } = await supabase
-        .from("contact_submissions")
-        .insert([data]);
+        .from("bookings")
+        .insert([bookingData]);
 
       if (submitError) throw submitError;
 
