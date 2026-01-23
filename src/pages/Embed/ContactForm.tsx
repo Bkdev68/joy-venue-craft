@@ -183,11 +183,37 @@ export default function EmbedContactForm() {
     };
 
     try {
-      const { error: submitError } = await supabase
+      // Save to bookings table
+      const { error: bookingError } = await supabase
         .from("bookings")
         .insert([bookingData]);
 
-      if (submitError) throw submitError;
+      if (bookingError) throw bookingError;
+
+      // Also save to contact_submissions for the Anfragen page
+      const contactData = {
+        name: formData.get("name") as string,
+        email: formData.get("email") as string,
+        phone: formData.get("phone") as string,
+        message: messageText || "Keine Nachricht",
+        source: "embed",
+        venue: venue || null,
+        rental_object: serviceName || null,
+        event_type: eventTypeLabel || null,
+        event_date: eventDate ? format(eventDate, "yyyy-MM-dd") : null,
+        event_time: `${eventHour}:${eventMinute}`,
+        duration_hours: duration || null,
+        referral_sources: referralSources.length > 0 ? referralSources : null,
+        customer_type: customerType,
+        company_name: customerType === "firma" ? formData.get("company_name") as string : null,
+        company_street: customerType === "firma" ? formData.get("company_street") as string : null,
+        company_zip: customerType === "firma" ? formData.get("company_zip") as string : null,
+        company_city: customerType === "firma" ? formData.get("company_city") as string : null,
+        company_country: customerType === "firma" ? (formData.get("company_country") as string || "Österreich") : null,
+        is_read: false,
+      };
+
+      await supabase.from("contact_submissions").insert([contactData]);
 
       // Send email notification (don't await to not block the success message)
       supabase.functions.invoke("send-embed-notification", {
