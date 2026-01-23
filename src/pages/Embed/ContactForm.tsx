@@ -177,6 +177,33 @@ export default function EmbedContactForm() {
 
       if (submitError) throw submitError;
 
+      // Send email notification (don't await to not block the success message)
+      supabase.functions.invoke("send-embed-notification", {
+        body: {
+          customerName: formData.get("name") as string,
+          customerEmail: formData.get("email") as string,
+          customerPhone: formData.get("phone") as string,
+          eventDate: eventDate ? format(eventDate, "yyyy-MM-dd") : null,
+          eventType: eventTypeLabel,
+          serviceName: serviceName,
+          venue: venue,
+          eventTime: `${eventHour}:${eventMinute}`,
+          duration: duration,
+          message: messageText,
+          referralSources: referralSources,
+          customerType: customerType,
+          companyName: customerType === "firma" ? formData.get("company_name") as string : null,
+          companyStreet: customerType === "firma" ? formData.get("company_street") as string : null,
+          companyZip: customerType === "firma" ? formData.get("company_zip") as string : null,
+          companyCity: customerType === "firma" ? formData.get("company_city") as string : null,
+          companyCountry: customerType === "firma" ? formData.get("company_country") as string : null,
+        },
+      }).then(() => {
+        console.log("Email notification sent successfully");
+      }).catch((emailError) => {
+        console.error("Failed to send email notification:", emailError);
+      });
+
       setIsSuccess(true);
       (e.target as HTMLFormElement).reset();
       setRentalObjects([]);
