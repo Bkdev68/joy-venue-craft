@@ -39,6 +39,7 @@ import AdminLeistungen from "./pages/admin/AdminLeistungen";
 import AdminPreise from "./pages/admin/AdminPreise";
 import AdminKontakt from "./pages/admin/AdminKontakt";
 import AdminKalender from "./pages/admin/AdminKalender";
+import AdminAnfragen from "./pages/admin/AdminAnfragen";
 import EmbedContactForm from "./pages/Embed/ContactForm";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,7 @@ const App = () => (
                 <Route path="seite/leistungen" element={<AdminLeistungen />} />
                 <Route path="seite/preise" element={<AdminPreise />} />
                 <Route path="seite/kontakt" element={<AdminKontakt />} />
+                <Route path="anfragen" element={<AdminAnfragen />} />
               </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
