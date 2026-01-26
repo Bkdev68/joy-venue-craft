@@ -97,6 +97,8 @@ interface Booking {
   custom_staff?: string | null;
   // Soft delete
   deleted_at?: string | null;
+  // Google Calendar sync
+  google_calendar_event_id?: string | null;
 }
 
 interface Service {
@@ -524,6 +526,28 @@ export default function AdminBookings() {
   const deletedBookings = bookings.filter(b => b.deleted_at);
   const baseBookings = activeTab === 'inbox' ? activeBookings : deletedBookings;
 
+  // Sync booking to Google Calendar
+  const syncToGoogleCalendar = async (booking: Booking, action: 'create' | 'update' | 'delete') => {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+        body: { action, booking },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        console.log('Google Calendar sync successful:', data.message);
+        return data;
+      } else {
+        console.error('Google Calendar sync failed:', data?.error);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error syncing to Google Calendar:', error);
+      return null;
+    }
+  };
+
   const updateStatus = async (id: string, status: string) => {
     try {
       const booking = bookings.find(b => b.id === id);
@@ -542,6 +566,16 @@ export default function AdminBookings() {
         if (invoice) {
           toast.success(`Rechnung ${invoice.invoice_number} automatisch erstellt`);
         }
+        
+        // Sync to Google Calendar when confirmed
+        const syncResult = await syncToGoogleCalendar({ ...booking, status }, 'create');
+        if (syncResult?.success) {
+          toast.success('Termin im Google Kalender erstellt');
+        }
+      } else if (status === 'cancelled' && booking?.google_calendar_event_id) {
+        // Remove from Google Calendar when cancelled
+        await syncToGoogleCalendar(booking, 'delete');
+        toast.info('Termin aus Google Kalender entfernt');
       } else {
         toast.success('Status aktualisiert');
       }
