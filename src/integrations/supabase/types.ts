@@ -155,6 +155,7 @@ export type Database = {
           event_date: string
           event_time: string | null
           event_type: string | null
+          google_calendar_event_id: string | null
           id: string
           is_all_day: boolean | null
           location: string | null
@@ -169,6 +170,7 @@ export type Database = {
           event_date: string
           event_time?: string | null
           event_type?: string | null
+          google_calendar_event_id?: string | null
           id?: string
           is_all_day?: boolean | null
           location?: string | null
@@ -183,6 +185,7 @@ export type Database = {
           event_date?: string
           event_time?: string | null
           event_type?: string | null
+          google_calendar_event_id?: string | null
           id?: string
           is_all_day?: boolean | null
           location?: string | null
