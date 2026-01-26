@@ -158,13 +158,13 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Einstellungen</h1>
-        <p className="text-muted-foreground mt-1">Verwalten Sie E-Mail-Empfänger und Kontaktdaten</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Einstellungen</h1>
+        <p className="text-muted-foreground mt-1 text-sm">E-Mail-Empfänger und Kontaktdaten verwalten</p>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 md:gap-6">
         {/* Maintenance Mode */}
         <Card className={isMaintenanceMode ? 'border-yellow-500 bg-yellow-500/5' : ''}>
           <CardHeader>
@@ -407,7 +407,7 @@ export default function AdminSettings() {
         </Card>
       </div>
 
-      <Button onClick={handleSave} disabled={saving} size="lg">
+      <Button onClick={handleSave} disabled={saving} size="lg" className="w-full sm:w-auto">
         <Save className="h-4 w-4 mr-2" />
         {saving ? 'Speichern...' : 'Alle Einstellungen speichern'}
       </Button>

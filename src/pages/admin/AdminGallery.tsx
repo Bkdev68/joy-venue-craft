@@ -163,10 +163,10 @@ export default function AdminGallery() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Galerie</h1>
-          <p className="text-muted-foreground mt-1">Verwalten Sie Ihre Galerie-Bilder</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Galerie</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Verwalten Sie Ihre Galerie-Bilder</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
@@ -177,12 +177,12 @@ export default function AdminGallery() {
           }
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Bild hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="mx-4 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingImage ? 'Bild bearbeiten' : 'Neues Bild'}</DialogTitle>
             </DialogHeader>
@@ -225,7 +225,7 @@ export default function AdminGallery() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button type="submit" className="flex-1" disabled={uploading}>
                   {uploading ? 'Speichern...' : 'Speichern'}
                 </Button>

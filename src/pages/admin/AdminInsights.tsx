@@ -158,90 +158,90 @@ export default function AdminInsights() {
         </Select>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      {/* Key Metrics - horizontal scroll on mobile */}
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-4">
+        <Card className="min-w-[160px] flex-shrink-0 md:min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Buchungsanfragen</CardTitle>
+            <CardTitle className="text-sm font-medium">Anfragen</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalBookings || 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{stats?.totalBookings || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats?.pendingBookings || 0} ausstehend
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-[160px] flex-shrink-0 md:min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bestätigte Buchungen</CardTitle>
+            <CardTitle className="text-sm font-medium">Bestätigt</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.confirmedBookings || 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{stats?.confirmedBookings || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.totalBookings ? Math.round((stats.confirmedBookings / stats.totalBookings) * 100) : 0}% Konversionsrate
+              {stats?.totalBookings ? Math.round((stats.confirmedBookings / stats.totalBookings) * 100) : 0}% Konversion
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-[160px] flex-shrink-0 md:min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Umsatz (bestätigt)</CardTitle>
+            <CardTitle className="text-sm font-medium">Umsatz</CardTitle>
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{stats?.totalRevenue?.toLocaleString() || 0}</div>
+            <div className="text-xl md:text-2xl font-bold">€{stats?.totalRevenue?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Ø €{Math.round(stats?.avgBookingValue || 0)} pro Buchung
+              Ø €{Math.round(stats?.avgBookingValue || 0)} / Buchung
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-[160px] flex-shrink-0 md:min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Top Service</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold truncate">{stats?.topService || '-'}</div>
-            <p className="text-xs text-muted-foreground">
-              Beliebtester Event-Typ: {stats?.topEventType || '-'}
+            <div className="text-xl md:text-2xl font-bold truncate">{stats?.topService || '-'}</div>
+            <p className="text-xs text-muted-foreground truncate">
+              Top: {stats?.topEventType || '-'}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Content Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+      {/* Content Overview - horizontal scroll on mobile */}
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3">
+        <Card className="min-w-[120px] flex-shrink-0 md:min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Galerie-Bilder</CardTitle>
+            <CardTitle className="text-sm font-medium">Galerie</CardTitle>
             <Image className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.galleryImages || 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{stats?.galleryImages || 0}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-[120px] flex-shrink-0 md:min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Testimonials</CardTitle>
+            <CardTitle className="text-sm font-medium">Bewertungen</CardTitle>
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.testimonials || 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{stats?.testimonials || 0}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-[120px] flex-shrink-0 md:min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">FAQs</CardTitle>
             <HelpCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.faqs || 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{stats?.faqs || 0}</div>
           </CardContent>
         </Card>
       </div>

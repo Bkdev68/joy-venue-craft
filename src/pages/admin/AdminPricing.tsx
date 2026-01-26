@@ -175,25 +175,25 @@ export default function AdminPricing() {
   return (
     <AdminPageWrapper title="Preise verwalten">
       <Section>
-        <div className="flex justify-between items-center mb-6">
-          <p className="text-muted-foreground">
-            Hier können Sie die Preise für Mietobjekte und Anfahrtskosten anpassen.
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <p className="text-muted-foreground text-sm">
+            Preise für Mietobjekte und Anfahrtskosten anpassen.
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={resetToDefaults}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Zurücksetzen
+            <Button variant="outline" size="sm" onClick={resetToDefaults} className="flex-1 sm:flex-none">
+              <RotateCcw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Zurücksetzen</span>
             </Button>
-            <Button onClick={savePricing} disabled={saving}>
+            <Button size="sm" onClick={savePricing} disabled={saving} className="flex-1 sm:flex-none">
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Speichern...
+                  <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">Speichern...</span>
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Speichern
+                  <Save className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Speichern</span>
                 </>
               )}
             </Button>
@@ -201,20 +201,20 @@ export default function AdminPricing() {
         </div>
 
         {/* Rental Objects Pricing */}
-        <div className="grid gap-6 mb-8">
-          <h2 className="text-xl font-semibold">Mietobjekte</h2>
+        <div className="grid gap-4 md:gap-6 mb-6 md:mb-8">
+          <h2 className="text-lg md:text-xl font-semibold">Mietobjekte</h2>
           
           {pricingData.map((item) => (
             <Card key={item.id}>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+              <CardHeader className="pb-3 md:pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg text-primary">
                       {getIcon(item.rental_object)}
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{item.display_name}</CardTitle>
-                      <CardDescription>
+                      <CardTitle className="text-base md:text-lg">{item.display_name}</CardTitle>
+                      <CardDescription className="text-xs">
                         {item.rental_object}
                       </CardDescription>
                     </div>
@@ -229,10 +229,10 @@ export default function AdminPricing() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2 text-sm">
                       <Euro className="h-4 w-4 text-muted-foreground" />
                       Grundpreis (€)
                     </Label>
@@ -247,7 +247,7 @@ export default function AdminPricing() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       Stundenpreis (€/h)
                     </Label>
@@ -262,7 +262,7 @@ export default function AdminPricing() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Mindestbuchung (Stunden)</Label>
+                    <Label className="text-sm">Mindestbuchung (h)</Label>
                     <Input
                       type="number"
                       value={item.min_hours}
@@ -275,9 +275,9 @@ export default function AdminPricing() {
                 </div>
                 
                 {item.is_active && (
-                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                  <div className="mt-3 md:mt-4 p-3 bg-muted rounded-lg">
                     <p className="text-sm">
-                      <strong>Beispielpreis ({item.min_hours}h):</strong>{' '}
+                      <strong>Beispiel ({item.min_hours}h):</strong>{' '}
                       €{(item.base_price + (item.hourly_rate * item.min_hours)).toLocaleString('de-DE')}
                     </p>
                   </div>
@@ -290,22 +290,22 @@ export default function AdminPricing() {
         {/* Travel/KM Pricing */}
         {travelData && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+            <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
               <Car className="h-5 w-5" />
               Anfahrtskosten
             </h2>
             
             <Card>
-              <CardHeader>
-                <CardTitle>Kilometergeld</CardTitle>
-                <CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg">Kilometergeld</CardTitle>
+                <CardDescription className="text-sm">
                   Kosten für die Anfahrt zum Veranstaltungsort
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                   <div className="space-y-2">
-                    <Label>Preis pro km (€)</Label>
+                    <Label className="text-sm">€/km</Label>
                     <Input
                       type="number"
                       value={travelData.rate_per_km}
@@ -316,18 +316,17 @@ export default function AdminPricing() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Frei-Kilometer</Label>
+                    <Label className="text-sm">Frei-km</Label>
                     <Input
                       type="number"
                       value={travelData.free_kilometers}
                       onChange={(e) => updateTravelField('free_kilometers', parseInt(e.target.value) || 0)}
                       min={0}
                     />
-                    <p className="text-xs text-muted-foreground">Kostenlose km</p>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Mindestbetrag (€)</Label>
+                    <Label className="text-sm">Min. €</Label>
                     <Input
                       type="number"
                       value={travelData.min_charge}
@@ -337,18 +336,18 @@ export default function AdminPricing() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Maximalbetrag (€)</Label>
+                    <Label className="text-sm">Max. €</Label>
                     <Input
                       type="number"
                       value={travelData.max_charge || ''}
                       onChange={(e) => updateTravelField('max_charge', e.target.value ? parseFloat(e.target.value) : null)}
                       min={0}
-                      placeholder="Unbegrenzt"
+                      placeholder="∞"
                     />
                   </div>
                 </div>
                 
-                <div className="mt-4 p-3 bg-muted rounded-lg">
+                <div className="mt-3 md:mt-4 p-3 bg-muted rounded-lg">
                   <p className="text-sm">
                     <strong>Beispiel (50 km):</strong>{' '}
                     €{Math.max(
@@ -358,7 +357,7 @@ export default function AdminPricing() {
                         travelData.max_charge || Infinity
                       )
                     ).toLocaleString('de-DE', { minimumFractionDigits: 2 })}
-                    {' '}(nach Abzug von {travelData.free_kilometers} Frei-km)
+                    {' '}(nach {travelData.free_kilometers} Frei-km)
                   </p>
                 </div>
               </CardContent>
