@@ -27,15 +27,19 @@ export default function AdminLogin() {
 
   // Redirect if already logged in as admin, or after successful login when role is confirmed
   useEffect(() => {
+    console.log('[AdminLogin] Redirect check:', { loading, hasSession: !!session, isAdmin });
     if (!loading && session && isAdmin) {
+      console.log('[AdminLogin] Redirecting to /admin');
       navigate('/admin', { replace: true });
     }
   }, [session, isAdmin, loading, navigate]);
 
   // Handle case where login succeeded but user has no admin/editor role
   useEffect(() => {
+    console.log('[AdminLogin] Permission check:', { loginSuccess, loading, hasSession: !!session, isAdmin });
     // Only check after loading is complete and we have a session
     if (loginSuccess && !loading && session && !isAdmin) {
+      console.log('[AdminLogin] No permission - signing out');
       toast.error('Sie haben keine Berechtigung für den Admin-Bereich');
       supabase.auth.signOut();
       setLoginSuccess(false);
