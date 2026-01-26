@@ -56,6 +56,58 @@ async function getAccessToken(): Promise<string> {
     throw new Error("Google Service Account credentials not configured");
   }
 
+  // The secret is sometimes pasted as the entire JSON key file instead of just the PEM.
+  // We normalize it here to avoid crypto import errors.
+  const normalizePrivateKeyPem = (raw: string): string => {
+    let key = raw.trim();
+
+    // If a user pasted the full JSON, extract private_key.
+    if (key.startsWith("{") || key.includes('"private_key"')) {
+      try {
+        const parsed = JSON.parse(key);
+        if (typeof parsed?.private_key === "string") {
+          key = parsed.private_key;
+        }
+      } catch {
+        // ignore; we'll validate below
+      }
+    }
+
+    // Convert literal \n sequences into real newlines
+    key = key.replace(/\\n/g, "\n").trim();
+
+    // We only support PKCS8 keys (Google service accounts provide this)
+    if (key.includes("BEGIN RSA PRIVATE KEY")) {
+      throw new Error(
+        "Ungültiger Private Key: PKCS#1 erkannt (BEGIN RSA PRIVATE KEY). Bitte den Wert aus dem JSON Feld 'private_key' verwenden (BEGIN PRIVATE KEY)."
+      );
+    }
+
+    if (!key.includes("BEGIN PRIVATE KEY") || !key.includes("END PRIVATE KEY")) {
+      // Avoid logging the key, but provide actionable hints.
+      const looksLikeJson = key.startsWith("{") || key.includes('"type"') || key.includes('"client_email"');
+      throw new Error(
+        `Ungültiger Private Key. Erwartet wird ein PEM im Format '-----BEGIN PRIVATE KEY-----'. ${looksLikeJson ? "Es sieht so aus, als wäre der komplette JSON-Key eingefügt worden." : ""}`
+      );
+    }
+
+    return key;
+  };
+
+  const pemToPkcs8Der = (pem: string): ArrayBuffer => {
+    const base64 = pem
+      .replace(/-----BEGIN [^-]+-----/g, "")
+      .replace(/-----END [^-]+-----/g, "")
+      .replace(/\s+/g, "")
+      .trim();
+
+    // base64 decoding (DER)
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  };
+
   // Create JWT header
   const header = {
     alg: "RS256",
@@ -85,23 +137,33 @@ async function getAccessToken(): Promise<string> {
   const signatureInput = `${headerEncoded}.${claimEncoded}`;
 
   // Import private key and sign
-  const pemHeader = "-----BEGIN PRIVATE KEY-----";
-  const pemFooter = "-----END PRIVATE KEY-----";
-  let keyContent = privateKey.replace(/\\n/g, "\n");
-  keyContent = keyContent.replace(pemHeader, "").replace(pemFooter, "").replace(/\s/g, "");
-  
-  const binaryKey = Uint8Array.from(atob(keyContent), (c) => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
-    false,
-    ["sign"]
-  );
+  const normalizedPem = normalizePrivateKeyPem(privateKey);
+  const binaryKey = pemToPkcs8Der(normalizedPem);
+
+  let cryptoKey: CryptoKey;
+  try {
+    cryptoKey = await crypto.subtle.importKey(
+      "pkcs8",
+      binaryKey,
+      {
+        name: "RSASSA-PKCS1-v1_5",
+        hash: "SHA-256",
+      },
+      false,
+      ["sign"]
+    );
+  } catch (e) {
+    // Provide a more helpful message than the raw ASN.1 error.
+    console.error("Private key import failed (sanitized):", {
+      hasBegin: normalizedPem.includes("BEGIN PRIVATE KEY"),
+      hasEnd: normalizedPem.includes("END PRIVATE KEY"),
+      derLength: binaryKey ? new Uint8Array(binaryKey).byteLength : undefined,
+      error: e instanceof Error ? e.message : String(e),
+    });
+    throw new Error(
+      "Private Key konnte nicht gelesen werden. Bitte prüfe, dass wirklich der PEM-Block aus 'private_key' (inkl. BEGIN/END) eingefügt wurde und keine zusätzlichen Zeichen/Anführungszeichen enthalten sind."
+    );
+  }
 
   const signatureBytes = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
