@@ -148,23 +148,23 @@ export default function AdminFAQ() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">FAQ</h1>
-          <p className="text-muted-foreground mt-1">Verwalten Sie häufig gestellte Fragen</p>
+          <h1 className="text-2xl md:text-3xl font-bold">FAQ</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Häufig gestellte Fragen verwalten</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button size="sm" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               FAQ hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="mx-4 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingFaq ? 'FAQ bearbeiten' : 'Neue FAQ'}</DialogTitle>
             </DialogHeader>
@@ -203,7 +203,7 @@ export default function AdminFAQ() {
                   ))}
                 </select>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button type="submit" className="flex-1" disabled={saving}>
                   {saving ? 'Speichern...' : 'Speichern'}
                 </Button>
@@ -230,20 +230,20 @@ export default function AdminFAQ() {
             <Card key={faq.id} className={!faq.is_active ? 'opacity-50' : ''}>
               <CardContent className="p-0">
                 <div
-                  className="flex items-center justify-between p-4 cursor-pointer"
+                  className="flex items-start justify-between p-3 md:p-4 cursor-pointer gap-2"
                   onClick={() => setExpandedId(expandedId === faq.id ? null : faq.id)}
                 >
-                  <div className="flex-1">
-                    <h3 className="font-medium">{faq.question}</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-sm md:text-base">{faq.question}</h3>
                     <span className="text-xs text-muted-foreground">{faq.category}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleActive(faq);
                       }}
-                      className={`text-xs px-2 py-1 rounded ${
+                      className={`text-xs px-2 py-1 rounded hidden sm:inline-block ${
                         faq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                       }`}
                     >
@@ -252,6 +252,7 @@ export default function AdminFAQ() {
                     <Button
                       size="icon"
                       variant="ghost"
+                      className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEdit(faq);
@@ -262,6 +263,7 @@ export default function AdminFAQ() {
                     <Button
                       size="icon"
                       variant="ghost"
+                      className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(faq.id);
@@ -277,8 +279,19 @@ export default function AdminFAQ() {
                   </div>
                 </div>
                 {expandedId === faq.id && (
-                  <div className="px-4 pb-4 text-sm text-muted-foreground border-t pt-3">
+                  <div className="px-3 md:px-4 pb-3 md:pb-4 text-sm text-muted-foreground border-t pt-3">
                     {faq.answer}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleActive(faq);
+                      }}
+                      className={`sm:hidden mt-2 text-xs px-2 py-1 rounded ${
+                        faq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {faq.is_active ? 'Aktiv' : 'Inaktiv'}
+                    </button>
                   </div>
                 )}
               </CardContent>

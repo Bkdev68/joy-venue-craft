@@ -288,9 +288,9 @@ export default function AdminAnfragen() {
   return (
     <AdminPageWrapper title="Kontaktanfragen">
       <Section>
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
+        {/* Stats Cards - horizontal scroll on mobile */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 mb-6">
+          <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gesamt</CardTitle>
               <Inbox className="h-4 w-4 text-muted-foreground" />
@@ -299,7 +299,7 @@ export default function AdminAnfragen() {
               <div className="text-2xl font-bold">{submissions.length}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ungelesen</CardTitle>
               <Circle className="h-4 w-4 text-primary" />
@@ -308,9 +308,9 @@ export default function AdminAnfragen() {
               <div className="text-2xl font-bold text-primary">{unreadCount}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Embed-Anfragen</CardTitle>
+              <CardTitle className="text-sm font-medium">Embed</CardTitle>
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -322,8 +322,8 @@ export default function AdminAnfragen() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Suche nach Name, E-Mail oder Firma..."
@@ -332,41 +332,101 @@ export default function AdminAnfragen() {
               className="pl-10"
             />
           </div>
-          <Select value={filterSource} onValueChange={setFilterSource}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Quelle" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Quellen</SelectItem>
-              <SelectItem value="website">Website</SelectItem>
-              <SelectItem value="embed">Embed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <SelectValue placeholder="Typ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Typen</SelectItem>
-              <SelectItem value="privat">Privat</SelectItem>
-              <SelectItem value="firma">Firma</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterRead} onValueChange={setFilterRead}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle</SelectItem>
-              <SelectItem value="unread">Ungelesen</SelectItem>
-              <SelectItem value="read">Gelesen</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+            <Select value={filterSource} onValueChange={setFilterSource}>
+              <SelectTrigger className="w-[130px] flex-shrink-0">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Quelle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Quellen</SelectItem>
+                <SelectItem value="website">Website</SelectItem>
+                <SelectItem value="embed">Embed</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-[120px] flex-shrink-0">
+                <SelectValue placeholder="Typ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Typen</SelectItem>
+                <SelectItem value="privat">Privat</SelectItem>
+                <SelectItem value="firma">Firma</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterRead} onValueChange={setFilterRead}>
+              <SelectTrigger className="w-[120px] flex-shrink-0">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle</SelectItem>
+                <SelectItem value="unread">Ungelesen</SelectItem>
+                <SelectItem value="read">Gelesen</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-md border">
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Lade Anfragen...</div>
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">Keine Anfragen gefunden</div>
+          ) : (
+            filteredSubmissions.map((submission) => (
+              <Card 
+                key={submission.id}
+                className={`cursor-pointer transition-colors hover:bg-muted/50 ${!submission.is_read ? 'border-primary/50 bg-primary/5' : ''}`}
+                onClick={() => handleViewSubmission(submission)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {!submission.is_read ? (
+                        <Circle className="h-3 w-3 fill-primary text-primary" />
+                      ) : (
+                        <CheckCircle className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{submission.name}</span>
+                        <Badge variant={submission.source === 'embed' ? 'default' : 'secondary'} className="text-xs">
+                          {submission.source === 'embed' ? 'Embed' : 'Website'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">{submission.email}</p>
+                      {submission.company_name && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Building2 className="h-3 w-3" />
+                          {submission.company_name}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        {submission.event_type && <span>{submission.event_type}</span>}
+                        {submission.event_date && (
+                          <span>{format(new Date(submission.event_date), 'dd.MM.yy', { locale: de })}</span>
+                        )}
+                      </div>
+                      {submission.rental_object && (
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-xs">
+                            {getRentalObjectLabel(submission.rental_object)}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <Eye className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -465,7 +525,7 @@ export default function AdminAnfragen() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto mx-4">
           <DialogHeader>
             <DialogTitle>Anfrage Details</DialogTitle>
           </DialogHeader>
