@@ -29,8 +29,25 @@ import {
   Download,
   Eye,
   Camera,
-  Loader2
+  Loader2,
+  Inbox,
+  Trash,
+  RotateCcw,
+  X,
+  CalendarCheck
 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -78,6 +95,8 @@ interface Booking {
   // Staff assignment
   assigned_staff?: string[] | null;
   custom_staff?: string | null;
+  // Soft delete
+  deleted_at?: string | null;
 }
 
 interface Service {
@@ -127,6 +146,14 @@ export default function AdminBookings() {
   const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState<string | null>(null);
   const [emailPreviewBooking, setEmailPreviewBooking] = useState<Booking | null>(null);
   const [analyzingImage, setAnalyzingImage] = useState(false);
+  
+  // Trash & deletion states
+  const [activeTab, setActiveTab] = useState<'inbox' | 'trash'>('inbox');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPermanentDeleteDialog, setShowPermanentDeleteDialog] = useState(false);
+  const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
+  const [keepCalendarEvent, setKeepCalendarEvent] = useState(true);
   
   // Email preview state
 
@@ -400,19 +427,102 @@ export default function AdminBookings() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Buchung wirklich löschen?')) return;
+  // Open delete dialog (single booking)
+  const handleDelete = (id: string) => {
+    setDeleteBookingId(id);
+    setKeepCalendarEvent(true);
+    setShowDeleteDialog(true);
+  };
+
+  // Soft delete - move to trash
+  const confirmSoftDelete = async () => {
+    const idsToDelete = deleteBookingId ? [deleteBookingId] : Array.from(selectedIds);
+    if (idsToDelete.length === 0) return;
 
     try {
-      const { error } = await supabase.from('bookings').delete().eq('id', id);
+      const { error } = await supabase
+        .from('bookings')
+        .update({ deleted_at: new Date().toISOString() })
+        .in('id', idsToDelete);
+      
       if (error) throw error;
-      toast.success('Buchung gelöscht');
+      
+      // If not keeping calendar event, also delete from calendar_events
+      if (!keepCalendarEvent) {
+        // Get the booking dates to match with calendar events
+        const bookingsToDelete = bookings.filter(b => idsToDelete.includes(b.id));
+        for (const booking of bookingsToDelete) {
+          await supabase
+            .from('calendar_events')
+            .delete()
+            .eq('event_date', booking.date)
+            .ilike('title', `%${booking.customer_name}%`);
+        }
+      }
+      
+      toast.success('In Papierkorb verschoben' + (keepCalendarEvent ? ' (Kalendereintrag bleibt)' : ''));
+      setSelectedIds(new Set());
+      setDeleteBookingId(null);
+      setShowDeleteDialog(false);
       fetchData();
     } catch (error) {
       console.error('Error deleting booking:', error);
       toast.error('Fehler beim Löschen');
     }
   };
+
+  // Restore from trash
+  const restoreBookings = async (ids: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ deleted_at: null })
+        .in('id', ids);
+      
+      if (error) throw error;
+      toast.success('Wiederhergestellt');
+      setSelectedIds(new Set());
+      fetchData();
+    } catch (error) {
+      console.error('Error restoring booking:', error);
+      toast.error('Fehler beim Wiederherstellen');
+    }
+  };
+
+  // Permanent delete
+  const confirmPermanentDelete = async () => {
+    const idsToDelete = deleteBookingId ? [deleteBookingId] : Array.from(selectedIds);
+    if (idsToDelete.length === 0) return;
+
+    try {
+      const { error } = await supabase.from('bookings').delete().in('id', idsToDelete);
+      if (error) throw error;
+      toast.success('Endgültig gelöscht');
+      setSelectedIds(new Set());
+      setDeleteBookingId(null);
+      setShowPermanentDeleteDialog(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error permanently deleting booking:', error);
+      toast.error('Fehler beim Löschen');
+    }
+  };
+
+  // Toggle selection
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  // Separate active and deleted bookings
+  const activeBookings = bookings.filter(b => !b.deleted_at);
+  const deletedBookings = bookings.filter(b => b.deleted_at);
+  const baseBookings = activeTab === 'inbox' ? activeBookings : deletedBookings;
 
   const updateStatus = async (id: string, status: string) => {
     try {
@@ -447,7 +557,7 @@ export default function AdminBookings() {
     ? packages.filter(p => p.service_id === form.service_id) 
     : packages;
 
-  const filteredBookings = bookings.filter(booking => {
+  const filteredBookings = baseBookings.filter(booking => {
     const matchesSearch = 
       booking.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       booking.customer_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -568,16 +678,99 @@ export default function AdminBookings() {
             <Download className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="flex-1 sm:flex-none">
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Buchung hinzufügen</span>
+        </div>
+      </div>
+
+      {/* Tabs for Inbox / Trash */}
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'inbox' | 'trash'); setSelectedIds(new Set()); }}>
+        <TabsList>
+          <TabsTrigger value="inbox" className="flex items-center gap-2">
+            <Inbox className="h-4 w-4" />
+            Buchungen
+            {activeBookings.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{activeBookings.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="trash" className="flex items-center gap-2">
+            <Trash className="h-4 w-4" />
+            Papierkorb
+            {deletedBookings.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{deletedBookings.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Selection Toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 p-3 bg-muted rounded-lg">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+              className="ml-auto sm:hidden"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {activeTab === 'trash' ? (
+              <>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => restoreBookings(Array.from(selectedIds))}
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Wiederherstellen
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowPermanentDeleteDialog(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Endgültig löschen
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setDeleteBookingId(null);
+                  setShowDeleteDialog(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Löschen
               </Button>
-            </DialogTrigger>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+              className="hidden sm:flex"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Booking Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) resetForm();
+      }}>
+        <DialogTrigger asChild>
+          <Button size="sm" className={activeTab === 'trash' ? 'hidden' : ''}>
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Buchung hinzufügen</span>
+          </Button>
+        </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
               <DialogHeader>
                 <DialogTitle>{editingBooking ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
@@ -814,8 +1007,6 @@ export default function AdminBookings() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
 
       {/* Filters */}
       <Card>
@@ -922,6 +1113,13 @@ export default function AdminBookings() {
                   className="p-3 md:p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-start gap-3">
+                    {/* Checkbox for selection */}
+                    <Checkbox 
+                      checked={selectedIds.has(booking.id)}
+                      onCheckedChange={() => toggleSelection(booking.id)}
+                      className="mt-2"
+                    />
+                    
                     {/* Date */}
                     <div className="text-center bg-muted px-3 py-2 rounded-lg min-w-[55px] md:min-w-[70px]">
                       <p className="text-base md:text-lg font-bold">{format(new Date(booking.date), 'd')}</p>
@@ -1015,12 +1213,25 @@ export default function AdminBookings() {
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleView(booking)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(booking)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(booking.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {activeTab === 'trash' ? (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => restoreBookings([booking.id])} title="Wiederherstellen">
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setDeleteBookingId(booking.id); setShowPermanentDeleteDialog(true); }} title="Endgültig löschen">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(booking)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(booking.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1296,6 +1507,55 @@ export default function AdminBookings() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Soft Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>In Papierkorb verschieben?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteBookingId ? '1 Buchung wird' : `${selectedIds.size} Buchung(en) werden`} in den Papierkorb verschoben.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <Checkbox 
+              id="keepCalendar"
+              checked={keepCalendarEvent}
+              onCheckedChange={(checked) => setKeepCalendarEvent(checked as boolean)}
+            />
+            <label htmlFor="keepCalendar" className="flex items-center gap-2 cursor-pointer text-sm">
+              <CalendarCheck className="h-4 w-4 text-primary" />
+              <span>Kalendereintrag behalten</span>
+            </label>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setDeleteBookingId(null); }}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSoftDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              In Papierkorb
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent Delete Confirmation Dialog */}
+      <AlertDialog open={showPermanentDeleteDialog} onOpenChange={setShowPermanentDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteBookingId ? '1 Buchung wird' : `${selectedIds.size} Buchung(en) werden`} unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setDeleteBookingId(null); }}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPermanentDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

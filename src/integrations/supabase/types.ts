@@ -36,6 +36,7 @@ export type Database = {
           customer_phone: string | null
           customer_type: string | null
           date: string
+          deleted_at: string | null
           duration_hours: number | null
           event_time: string | null
           event_type: string
@@ -72,6 +73,7 @@ export type Database = {
           customer_phone?: string | null
           customer_type?: string | null
           date: string
+          deleted_at?: string | null
           duration_hours?: number | null
           event_time?: string | null
           event_type: string
@@ -108,6 +110,7 @@ export type Database = {
           customer_phone?: string | null
           customer_type?: string | null
           date?: string
+          deleted_at?: string | null
           duration_hours?: number | null
           event_time?: string | null
           event_type?: string
