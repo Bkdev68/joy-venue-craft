@@ -27,7 +27,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check if user has any admin panel access (admin or editor)
   const checkUserRole = async (userId: string): Promise<UserRole> => {
     try {
-      console.log('[useAuth] Checking user role for userId:', userId);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -38,7 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error checking user role:', error);
         return null;
       }
-      console.log('[useAuth] User role data:', data);
       return data?.role as UserRole || null;
     } catch (err) {
       console.error('Error in checkUserRole:', err);
@@ -48,8 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // isAdmin means user has access to admin panel (admin OR editor)
   const isAdmin = userRole === 'admin' || userRole === 'editor';
-  
-  console.log('[useAuth] Current state:', { userRole, isAdmin, loading, hasUser: !!user });
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -80,9 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         const role = await checkUserRole(session.user.id);
         setUserRole(role);
+        setLoading(false);
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
