@@ -24,7 +24,8 @@ import {
   Plus,
   Trash2,
   Edit,
-  CalendarPlus
+  CalendarPlus,
+  Users
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -51,6 +52,8 @@ interface Booking {
   billing_city: string | null;
   billing_country: string | null;
   billing_vat_id: string | null;
+  assigned_staff: string[] | null;
+  custom_staff: string | null;
 }
 
 interface CalendarEvent {
@@ -632,6 +635,28 @@ export default function AdminKalender() {
                     )}
                   </div>
                 </div>
+
+                {/* Assigned Staff */}
+                {((booking.assigned_staff && booking.assigned_staff.length > 0) || booking.custom_staff) && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-xs md:text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5" />
+                      Zugewiesene Mitarbeiter
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {booking.assigned_staff?.map(name => (
+                        <Badge key={name} variant="secondary" className="text-xs">
+                          {name}
+                        </Badge>
+                      ))}
+                      {booking.custom_staff && (
+                        <Badge variant="outline" className="text-xs">
+                          {booking.custom_staff}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Message */}
                 {booking.message && (
