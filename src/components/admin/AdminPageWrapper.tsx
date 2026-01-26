@@ -32,9 +32,7 @@ export function AdminPageWrapper({ children, title, publicPath }: AdminPageWrapp
       </div>
       
       <div className="bg-background border rounded-2xl overflow-hidden shadow-sm">
-        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );
