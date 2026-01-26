@@ -25,7 +25,10 @@ import {
   Trash2,
   Edit,
   CalendarPlus,
-  Users
+  Users,
+  RefreshCw,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -109,6 +112,7 @@ export default function AdminKalender() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEntry, setSelectedEntry] = useState<CalendarEntry | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -367,6 +371,60 @@ export default function AdminKalender() {
     }
   };
 
+  // Sync all entries to Google Calendar
+  const handleSyncAllToGoogle = async () => {
+    setSyncing(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Sync all calendar events that don't have a Google Calendar ID
+      for (const event of events) {
+        try {
+          const action = event.google_calendar_event_id ? 'update' : 'create';
+          await syncToGoogleCalendar(action, event);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to sync event ${event.id}:`, error);
+          errorCount++;
+        }
+      }
+
+      // Sync all confirmed bookings
+      const confirmedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed');
+      for (const booking of confirmedBookings) {
+        try {
+          const { error } = await supabase.functions.invoke('google-calendar-sync', {
+            body: {
+              action: (booking as any).google_calendar_event_id ? 'update' : 'create',
+              type: 'booking',
+              booking: booking
+            }
+          });
+          if (!error) successCount++;
+          else errorCount++;
+        } catch (error) {
+          console.error(`Failed to sync booking ${booking.id}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        toast.success(`${successCount} Einträge erfolgreich synchronisiert`);
+      } else {
+        toast.warning(`${successCount} synchronisiert, ${errorCount} fehlgeschlagen`);
+      }
+
+      // Refresh data to get updated Google Calendar IDs
+      await fetchData();
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error('Fehler bei der Synchronisierung');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
   const weekDaysFull = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -407,10 +465,21 @@ export default function AdminKalender() {
               Übersicht aller Termine und Aufträge
             </p>
           </div>
-          <Button onClick={handleAddEvent} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Termin hinzufügen
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={handleSyncAllToGoogle} 
+              disabled={syncing}
+              className="w-full sm:w-auto"
+            >
+              <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
+              {syncing ? 'Synchronisiere...' : 'Mit Google synchronisieren'}
+            </Button>
+            <Button onClick={handleAddEvent} className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Termin hinzufügen
+            </Button>
+          </div>
         </div>
         
         {/* Legend - horizontal scrolling on mobile */}
