@@ -60,22 +60,14 @@ const toAsciiSubject = (subject: string) => {
   }
 };
 
-const sendEmail = async (to: string, subject: string, html: string) => {
+const sendEmail = async (to: string, subject: string, htmlBody: string) => {
   const client = getSmtpClient();
   try {
     await client.send({
       from: "PixelPalast <buchung@pixelpalast.at>",
       to: to,
       subject: toAsciiSubject(subject),
-      // Use explicit MIME parts to avoid clients showing raw multipart/quoted-printable source
-      // (we already minify HTML to reduce encoding artifacts)
-      mimeContent: [
-        {
-          mimeType: "text/html; charset=utf-8",
-          content: html,
-          transferEncoding: "quoted-printable",
-        },
-      ],
+      html: htmlBody,
     });
     console.log(`Email sent successfully to ${to}`);
     return { success: true };
@@ -182,87 +174,48 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     ` : '';
 
-    // Email to admin - properly formatted
-    const adminHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-</head>
-<body>
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <h1 style="color: #D4AF37; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">
-      📩 Neue Anfrage über Embed-Formular
-    </h1>
-    
-    <h2 style="color: #333;">Event-Details</h2>
-    <table style="width: 100%; border-collapse: collapse;">
-      ${eventRows}
-    </table>
-    
-    <h2 style="color: #333; margin-top: 20px;">Kontaktdaten</h2>
-    <table style="width: 100%; border-collapse: collapse;">
-      ${contactRows}
-    </table>
-    
-    ${messageSection}
-    ${referralSection}
-    
-    <div style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 5px;">
-      <strong>💡 Nächste Schritte:</strong><br>
-      Diese Anfrage wurde automatisch in den Buchungen gespeichert. Bitte kontaktieren Sie den Kunden zeitnah.
-    </div>
-    
-    <p style="color: #666; margin-top: 30px; font-size: 12px;">
-      Diese E-Mail wurde automatisch über das Embed-Kontaktformular gesendet.
-    </p>
+    // Email to admin - simplified HTML without DOCTYPE
+    const adminHtml = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h1 style="color: #D4AF37; border-bottom: 2px solid #D4AF37; padding-bottom: 10px; margin-bottom: 20px;">Neue Anfrage ueber Embed-Formular</h1>
+  <h2 style="color: #333; margin-top: 20px; margin-bottom: 10px;">Event-Details</h2>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+${eventRows}
+  </table>
+  <h2 style="color: #333; margin-top: 20px; margin-bottom: 10px;">Kontaktdaten</h2>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+${contactRows}
+  </table>
+${messageSection}
+${referralSection}
+  <div style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 5px;">
+    <strong>Naechste Schritte:</strong><br>
+    Diese Anfrage wurde automatisch in den Buchungen gespeichert. Bitte kontaktieren Sie den Kunden zeitnah.
   </div>
-</body>
-</html>
-    `.trim();
+  <p style="color: #666; margin-top: 30px; font-size: 12px;">Diese E-Mail wurde automatisch ueber das Embed-Kontaktformular gesendet.</p>
+</div>`;
 
     await sendEmail(adminEmail, `Neue Embed-Anfrage: ${data.serviceName} - ${data.customerName}`, adminHtml);
     console.log("Admin notification email sent");
 
-    // Confirmation email to customer - properly formatted
-    const customerHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-</head>
-<body>
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <h1 style="color: #D4AF37;">Vielen Dank für Ihre Anfrage!</h1>
-    
-    <p>Hallo ${safeValue(data.customerName)},</p>
-    
-    <p>wir haben Ihre Anfrage erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.</p>
-    
-    <h2 style="color: #333; margin-top: 20px;">Ihre Anfrage im Überblick</h2>
-    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
-      <p><strong>Datum:</strong> ${formattedDate}</p>
-      ${data.eventTime ? `<p><strong>Uhrzeit:</strong> ${safeValue(data.eventTime)} Uhr</p>` : ''}
-      ${data.duration ? `<p><strong>Dauer:</strong> ${data.duration} Stunden</p>` : ''}
-      <p><strong>Event-Art:</strong> ${safeValue(data.eventType)}</p>
-      <p><strong>Gewünschte Leistung:</strong> ${safeValue(data.serviceName)}</p>
-      ${data.venue ? `<p><strong>Veranstaltungsort:</strong> ${safeValue(data.venue)}</p>` : ''}
-    </div>
-    
-    <p style="margin-top: 20px;">Bei Fragen können Sie uns jederzeit kontaktieren.</p>
-    
-    <p>Mit freundlichen Grüßen,<br><strong>Ihr PixelPalast Team</strong></p>
-    
-    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-    
-    <p style="color: #999; font-size: 12px;">
-      PixelPalast - Photo Booth & 360° Video Booth<br>
-      <a href="https://pixelpalast.at" style="color: #D4AF37;">www.pixelpalast.at</a>
-    </p>
+    // Confirmation email to customer - simplified HTML
+    const customerHtml = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h1 style="color: #D4AF37; margin-bottom: 20px;">Vielen Dank fuer Ihre Anfrage!</h1>
+  <p>Hallo ${safeValue(data.customerName)},</p>
+  <p>wir haben Ihre Anfrage erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.</p>
+  <h2 style="color: #333; margin-top: 20px; margin-bottom: 10px;">Ihre Anfrage im Ueberblick</h2>
+  <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <p style="margin: 5px 0;"><strong>Datum:</strong> ${formattedDate}</p>
+    ${data.eventTime ? `<p style="margin: 5px 0;"><strong>Uhrzeit:</strong> ${safeValue(data.eventTime)} Uhr</p>` : ''}
+    ${data.duration ? `<p style="margin: 5px 0;"><strong>Dauer:</strong> ${data.duration} Stunden</p>` : ''}
+    <p style="margin: 5px 0;"><strong>Event-Art:</strong> ${safeValue(data.eventType)}</p>
+    <p style="margin: 5px 0;"><strong>Gewuenschte Leistung:</strong> ${safeValue(data.serviceName)}</p>
+    ${data.venue ? `<p style="margin: 5px 0;"><strong>Veranstaltungsort:</strong> ${safeValue(data.venue)}</p>` : ''}
   </div>
-</body>
-</html>
-    `.trim();
+  <p>Bei Fragen koennen Sie uns jederzeit kontaktieren.</p>
+  <p>Mit freundlichen Gruessen,<br><strong>Ihr PixelPalast Team</strong></p>
+  <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px;">PixelPalast - Photo Booth &amp; 360 Video Booth<br><a href="https://pixelpalast.at" style="color: #D4AF37;">www.pixelpalast.at</a></p>
+</div>`;
 
     let customerEmailSent = true;
     try {
