@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -21,6 +22,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -49,7 +60,9 @@ import {
   Check,
   Send,
   Loader2,
-  FileText
+  FileText,
+  Trash2,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -88,6 +101,8 @@ export default function AdminAnfragen() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterRead, setFilterRead] = useState<string>('all');
   const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // AI Response states
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
@@ -124,10 +139,25 @@ export default function AdminAnfragen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contact-submissions'] });
-      toast.success('Status aktualisiert');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('contact_submissions')
+        .delete()
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-submissions'] });
+      setSelectedIds(new Set());
+      toast.success('Anfragen gelöscht');
     },
     onError: () => {
-      toast.error('Fehler beim Aktualisieren');
+      toast.error('Fehler beim Löschen');
     },
   });
 
@@ -155,6 +185,41 @@ export default function AdminAnfragen() {
     if (!submission.is_read) {
       markAsReadMutation.mutate({ id: submission.id, is_read: true });
     }
+  };
+
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredSubmissions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSubmissions.map(s => s.id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    deleteMutation.mutate(Array.from(selectedIds));
+    setShowDeleteDialog(false);
+  };
+
+  const markSelectedAsRead = (is_read: boolean) => {
+    selectedIds.forEach(id => {
+      markAsReadMutation.mutate({ id, is_read });
+    });
+    toast.success(`${selectedIds.size} Anfragen als ${is_read ? 'gelesen' : 'ungelesen'} markiert`);
   };
 
   const getRentalObjectLabel = (obj: string) => {
@@ -288,74 +353,98 @@ export default function AdminAnfragen() {
   return (
     <AdminPageWrapper title="Kontaktanfragen">
       <Section>
-        {/* Stats Cards - horizontal scroll on mobile */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 mb-6">
-          <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gesamt</CardTitle>
-              <Inbox className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{submissions.length}</div>
-            </CardContent>
-          </Card>
-          <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ungelesen</CardTitle>
-              <Circle className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{unreadCount}</div>
-            </CardContent>
-          </Card>
-          <Card className="min-w-[140px] flex-shrink-0 md:min-w-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Embed</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter(s => s.source === 'embed').length}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Compact Stats Row */}
+        <div className="flex items-center gap-4 mb-4 text-sm">
+          <div className="flex items-center gap-2">
+            <Inbox className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{submissions.length}</span>
+            <span className="text-muted-foreground">Gesamt</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Circle className="h-3 w-3 fill-primary text-primary" />
+            <span className="font-medium text-primary">{unreadCount}</span>
+            <span className="text-muted-foreground">Ungelesen</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{submissions.filter(s => s.source === 'embed').length}</span>
+            <span className="text-muted-foreground">Embed</span>
+          </div>
         </div>
 
+        {/* Selection Toolbar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 mb-4 p-3 bg-muted rounded-lg">
+            <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
+            <div className="flex-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => markSelectedAsRead(true)}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Gelesen
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => markSelectedAsRead(false)}
+            >
+              <Circle className="h-4 w-4 mr-1" />
+              Ungelesen
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteSelected}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Löschen
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
         {/* Filters */}
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-col gap-2 mb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Suche nach Name, E-Mail oder Firma..."
+              placeholder="Suche..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-9"
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
             <Select value={filterSource} onValueChange={setFilterSource}>
-              <SelectTrigger className="w-[130px] flex-shrink-0">
-                <Filter className="h-4 w-4 mr-2" />
+              <SelectTrigger className="w-[110px] h-8 text-xs flex-shrink-0">
                 <SelectValue placeholder="Quelle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle Quellen</SelectItem>
+                <SelectItem value="all">Alle</SelectItem>
                 <SelectItem value="website">Website</SelectItem>
                 <SelectItem value="embed">Embed</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[120px] flex-shrink-0">
+              <SelectTrigger className="w-[100px] h-8 text-xs flex-shrink-0">
                 <SelectValue placeholder="Typ" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle Typen</SelectItem>
+                <SelectItem value="all">Alle</SelectItem>
                 <SelectItem value="privat">Privat</SelectItem>
                 <SelectItem value="firma">Firma</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterRead} onValueChange={setFilterRead}>
-              <SelectTrigger className="w-[120px] flex-shrink-0">
+              <SelectTrigger className="w-[100px] h-8 text-xs flex-shrink-0">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -367,161 +456,120 @@ export default function AdminAnfragen() {
           </div>
         </div>
 
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-3">
+        {/* Compact List View (Mobile & Desktop) */}
+        <div className="border rounded-md divide-y">
+          {/* Header with select all */}
+          <div className="flex items-center gap-3 p-2 bg-muted/50 text-xs font-medium text-muted-foreground">
+            <Checkbox 
+              checked={filteredSubmissions.length > 0 && selectedIds.size === filteredSubmissions.length}
+              onCheckedChange={toggleSelectAll}
+              className="h-4 w-4"
+            />
+            <span className="w-4"></span>
+            <span className="flex-1">Name / Kontakt</span>
+            <span className="hidden md:block w-32">Event</span>
+            <span className="hidden md:block w-24">Quelle</span>
+            <span className="hidden lg:block w-28">Datum</span>
+            <span className="w-16"></span>
+          </div>
+
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Lade Anfragen...</div>
           ) : filteredSubmissions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">Keine Anfragen gefunden</div>
           ) : (
             filteredSubmissions.map((submission) => (
-              <Card 
+              <div 
                 key={submission.id}
-                className={`cursor-pointer transition-colors hover:bg-muted/50 ${!submission.is_read ? 'border-primary/50 bg-primary/5' : ''}`}
-                onClick={() => handleViewSubmission(submission)}
+                className={`flex items-center gap-3 p-2 hover:bg-muted/30 cursor-pointer transition-colors ${!submission.is_read ? 'bg-primary/5' : ''}`}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      {!submission.is_read ? (
-                        <Circle className="h-3 w-3 fill-primary text-primary" />
-                      ) : (
-                        <CheckCircle className="h-3 w-3 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{submission.name}</span>
-                        <Badge variant={submission.source === 'embed' ? 'default' : 'secondary'} className="text-xs">
-                          {submission.source === 'embed' ? 'Embed' : 'Website'}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate">{submission.email}</p>
-                      {submission.company_name && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {submission.company_name}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        {submission.event_type && <span>{submission.event_type}</span>}
-                        {submission.event_date && (
-                          <span>{format(new Date(submission.event_date), 'dd.MM.yy', { locale: de })}</span>
-                        )}
-                      </div>
-                      {submission.rental_object && (
-                        <div className="mt-2">
-                          <Badge variant="outline" className="text-xs">
-                            {getRentalObjectLabel(submission.rental_object)}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                    <Eye className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Checkbox 
+                  checked={selectedIds.has(submission.id)}
+                  onCheckedChange={() => toggleSelection(submission.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4"
+                />
+                <div className="w-4 flex-shrink-0">
+                  {!submission.is_read ? (
+                    <Circle className="h-2.5 w-2.5 fill-primary text-primary" />
+                  ) : (
+                    <CheckCircle className="h-2.5 w-2.5 text-muted-foreground/50" />
+                  )}
+                </div>
+                <div 
+                  className="flex-1 min-w-0"
+                  onClick={() => handleViewSubmission(submission)}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm truncate ${!submission.is_read ? 'font-semibold' : 'font-medium'}`}>
+                      {submission.name}
+                    </span>
+                    {submission.company_name && (
+                      <span className="text-xs text-muted-foreground hidden sm:inline truncate">
+                        ({submission.company_name})
+                      </span>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="text-xs text-muted-foreground truncate">{submission.email}</div>
+                </div>
+                <div 
+                  className="hidden md:block w-32 text-xs text-muted-foreground truncate"
+                  onClick={() => handleViewSubmission(submission)}
+                >
+                  {submission.event_type && <div>{submission.event_type}</div>}
+                  {submission.event_date && (
+                    <div>{format(new Date(submission.event_date), 'dd.MM.yy', { locale: de })}</div>
+                  )}
+                </div>
+                <div 
+                  className="hidden md:flex w-24 gap-1"
+                  onClick={() => handleViewSubmission(submission)}
+                >
+                  <Badge variant={submission.source === 'embed' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                    {submission.source === 'embed' ? 'Embed' : 'Web'}
+                  </Badge>
+                </div>
+                <div 
+                  className="hidden lg:block w-28 text-xs text-muted-foreground"
+                  onClick={() => handleViewSubmission(submission)}
+                >
+                  {format(new Date(submission.created_at), 'dd.MM.yy HH:mm', { locale: de })}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={() => handleViewSubmission(submission)}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             ))
           )}
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40px]"></TableHead>
-                <TableHead>Name / Kontakt</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Mietobjekt</TableHead>
-                <TableHead>Quelle</TableHead>
-                <TableHead>Datum</TableHead>
-                <TableHead className="text-right">Aktionen</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    Lade Anfragen...
-                  </TableCell>
-                </TableRow>
-              ) : filteredSubmissions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    Keine Anfragen gefunden
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredSubmissions.map((submission) => (
-                  <TableRow 
-                    key={submission.id}
-                    className={!submission.is_read ? 'bg-primary/5' : ''}
-                  >
-                    <TableCell>
-                      {!submission.is_read ? (
-                        <Circle className="h-3 w-3 fill-primary text-primary" />
-                      ) : (
-                        <CheckCircle className="h-3 w-3 text-muted-foreground" />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{submission.name}</div>
-                      <div className="text-sm text-muted-foreground">{submission.email}</div>
-                      {submission.company_name && (
-                        <div className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {submission.company_name}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {submission.event_type && (
-                        <div className="text-sm">{submission.event_type}</div>
-                      )}
-                      {submission.event_date && (
-                        <div className="text-sm text-muted-foreground">
-                          {format(new Date(submission.event_date), 'dd.MM.yyyy', { locale: de })}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {submission.rental_object && (
-                        <div className="text-sm">
-                          {getRentalObjectLabel(submission.rental_object)}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={submission.source === 'embed' ? 'default' : 'secondary'}>
-                        {submission.source === 'embed' ? 'Embed' : 'Website'}
-                      </Badge>
-                      {submission.customer_type && (
-                        <Badge variant="outline" className="ml-1">
-                          {submission.customer_type === 'firma' ? 'Firma' : 'Privat'}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(submission.created_at), 'dd.MM.yyyy HH:mm', { locale: de })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewSubmission(submission)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <div className="mt-2 text-xs text-muted-foreground text-center">
+          {filteredSubmissions.length} von {submissions.length} Anfragen
         </div>
       </Section>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anfragen löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedIds.size} Anfrage(n) werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
