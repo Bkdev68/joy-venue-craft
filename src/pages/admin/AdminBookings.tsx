@@ -36,6 +36,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { PriceCalculator } from '@/components/admin/PriceCalculator';
+import { StaffAssignment } from '@/components/admin/StaffAssignment';
 
 interface Invoice {
   id: string;
@@ -74,6 +75,9 @@ interface Booking {
   company_zip?: string | null;
   company_city?: string | null;
   company_country?: string | null;
+  // Staff assignment
+  assigned_staff?: string[] | null;
+  custom_staff?: string | null;
 }
 
 interface Service {
@@ -139,6 +143,8 @@ export default function AdminBookings() {
     customer_phone: '',
     message: '',
     status: 'pending',
+    assigned_staff: [] as string[],
+    custom_staff: '',
   });
 
   const fetchData = async () => {
@@ -196,6 +202,8 @@ export default function AdminBookings() {
       customer_phone: '',
       message: '',
       status: 'pending',
+      assigned_staff: [],
+      custom_staff: '',
     });
   };
 
@@ -214,6 +222,8 @@ export default function AdminBookings() {
       customer_phone: booking.customer_phone || '',
       message: booking.message || '',
       status: booking.status,
+      assigned_staff: booking.assigned_staff || [],
+      custom_staff: booking.custom_staff || '',
     });
     setDialogOpen(true);
   };
@@ -358,6 +368,8 @@ export default function AdminBookings() {
         customer_phone: form.customer_phone || null,
         message: form.message || null,
         status: form.status,
+        assigned_staff: form.assigned_staff.length > 0 ? form.assigned_staff : null,
+        custom_staff: form.custom_staff || null,
       };
 
       if (editingBooking) {
@@ -771,6 +783,16 @@ export default function AdminBookings() {
                   </div>
                 </div>
 
+                {/* Staff Assignment */}
+                <div className="border-t pt-4">
+                  <StaffAssignment
+                    selectedStaff={form.assigned_staff}
+                    customStaff={form.custom_staff}
+                    onStaffChange={(staff) => setForm(prev => ({ ...prev, assigned_staff: staff }))}
+                    onCustomStaffChange={(custom) => setForm(prev => ({ ...prev, custom_staff: custom }))}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label>Nachricht / Notizen</Label>
                   <Textarea
@@ -924,6 +946,21 @@ export default function AdminBookings() {
                       <p className="text-sm text-muted-foreground">
                         {booking.event_type} • €{booking.package_price}
                       </p>
+                      {/* Staff badges */}
+                      {((booking.assigned_staff && booking.assigned_staff.length > 0) || booking.custom_staff) && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {booking.assigned_staff?.map(name => (
+                            <Badge key={name} variant="outline" className="text-xs py-0">
+                              {name}
+                            </Badge>
+                          ))}
+                          {booking.custom_staff && (
+                            <Badge variant="secondary" className="text-xs py-0">
+                              {booking.custom_staff}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -1103,6 +1140,19 @@ export default function AdminBookings() {
                       <Badge key={idx} variant="secondary">{source}</Badge>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Staff Assignment Display */}
+              {((viewingBooking.assigned_staff && viewingBooking.assigned_staff.length > 0) || viewingBooking.custom_staff) && (
+                <div className="border-t pt-4">
+                  <StaffAssignment
+                    selectedStaff={viewingBooking.assigned_staff || []}
+                    customStaff={viewingBooking.custom_staff || ''}
+                    onStaffChange={() => {}}
+                    onCustomStaffChange={() => {}}
+                    compact
+                  />
                 </div>
               )}
 

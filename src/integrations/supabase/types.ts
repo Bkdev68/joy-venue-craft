@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          assigned_staff: string[] | null
           billing_city: string | null
           billing_company: string | null
           billing_country: string | null
@@ -29,6 +30,7 @@ export type Database = {
           company_street: string | null
           company_zip: string | null
           created_at: string
+          custom_staff: string | null
           customer_email: string
           customer_name: string
           customer_phone: string | null
@@ -50,6 +52,7 @@ export type Database = {
           venue: string | null
         }
         Insert: {
+          assigned_staff?: string[] | null
           billing_city?: string | null
           billing_company?: string | null
           billing_country?: string | null
@@ -63,6 +66,7 @@ export type Database = {
           company_street?: string | null
           company_zip?: string | null
           created_at?: string
+          custom_staff?: string | null
           customer_email: string
           customer_name: string
           customer_phone?: string | null
@@ -84,6 +88,7 @@ export type Database = {
           venue?: string | null
         }
         Update: {
+          assigned_staff?: string[] | null
           billing_city?: string | null
           billing_company?: string | null
           billing_country?: string | null
@@ -97,6 +102,7 @@ export type Database = {
           company_street?: string | null
           company_zip?: string | null
           created_at?: string
+          custom_staff?: string | null
           customer_email?: string
           customer_name?: string
           customer_phone?: string | null
