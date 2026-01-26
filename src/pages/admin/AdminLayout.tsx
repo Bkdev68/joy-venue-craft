@@ -25,8 +25,11 @@ import {
   Inbox,
   Euro,
   Users,
-  StickyNote
+  StickyNote,
+  Moon,
+  Sun
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
 
@@ -60,9 +63,11 @@ interface NavContentProps {
   user: any;
   onSignOut: () => void;
   onNavClick?: () => void;
+  theme?: string;
+  onToggleTheme: () => void;
 }
 
-function NavContent({ location, user, onSignOut, onNavClick }: NavContentProps) {
+function NavContent({ location, user, onSignOut, onNavClick, theme, onToggleTheme }: NavContentProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
@@ -111,6 +116,14 @@ function NavContent({ location, user, onSignOut, onNavClick }: NavContentProps) 
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-3 text-muted-foreground" 
+          onClick={onToggleTheme}
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        </Button>
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-3 text-muted-foreground" 
           onClick={onSignOut}
         >
           <LogOut className="h-4 w-4" />
@@ -126,6 +139,11 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -181,6 +199,8 @@ export default function AdminLayout() {
               user={user} 
               onSignOut={handleSignOut}
               onNavClick={() => setMobileOpen(false)}
+              theme={theme}
+              onToggleTheme={toggleTheme}
             />
           </SheetContent>
         </Sheet>
@@ -192,6 +212,8 @@ export default function AdminLayout() {
           location={location} 
           user={user} 
           onSignOut={handleSignOut}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       </aside>
 
