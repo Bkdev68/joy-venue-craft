@@ -194,6 +194,7 @@ export type Database = {
           company_zip: string | null
           created_at: string
           customer_type: string | null
+          deleted_at: string | null
           duration_hours: number | null
           email: string
           event_date: string | null
@@ -219,6 +220,7 @@ export type Database = {
           company_zip?: string | null
           created_at?: string
           customer_type?: string | null
+          deleted_at?: string | null
           duration_hours?: number | null
           email: string
           event_date?: string | null
@@ -244,6 +246,7 @@ export type Database = {
           company_zip?: string | null
           created_at?: string
           customer_type?: string | null
+          deleted_at?: string | null
           duration_hours?: number | null
           email?: string
           event_date?: string | null
