@@ -21,15 +21,32 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const { signIn, session, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in as admin
+  // Redirect if already logged in as admin, or after successful login when role is confirmed
   useEffect(() => {
     if (!loading && session && isAdmin) {
       navigate('/admin', { replace: true });
     }
   }, [session, isAdmin, loading, navigate]);
+
+  // Handle case where login succeeded but user has no admin/editor role
+  useEffect(() => {
+    if (loginSuccess && !loading && session && !isAdmin) {
+      // Give a small delay to ensure role check has completed
+      const timeout = setTimeout(() => {
+        if (!isAdmin) {
+          toast.error('Sie haben keine Berechtigung für den Admin-Bereich');
+          supabase.auth.signOut();
+          setLoginSuccess(false);
+          setIsLoading(false);
+        }
+      }, 1000);
+      return () => clearTimeout(timeout);
+    }
+  }, [loginSuccess, loading, session, isAdmin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +73,9 @@ export default function AdminLogin() {
         return;
       }
 
+      // Mark login as successful - redirect will happen via useEffect when isAdmin updates
+      setLoginSuccess(true);
       toast.success('Erfolgreich angemeldet');
-      // Navigation happens via useEffect when session updates
     } catch (err) {
       toast.error('Ein Fehler ist aufgetreten');
       setIsLoading(false);
