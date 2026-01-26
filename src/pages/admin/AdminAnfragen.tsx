@@ -374,40 +374,52 @@ export default function AdminAnfragen() {
 
         {/* Selection Toolbar */}
         {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2 mb-4 p-3 bg-muted rounded-lg">
-            <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
-            <div className="flex-1" />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markSelectedAsRead(true)}
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Gelesen
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markSelectedAsRead(false)}
-            >
-              <Circle className="h-4 w-4 mr-1" />
-              Ungelesen
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteSelected}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Löschen
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedIds(new Set())}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+          <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-muted rounded-lg">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+                className="ml-auto sm:hidden"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteSelected}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Löschen
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markSelectedAsRead(true)}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Gelesen
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markSelectedAsRead(false)}
+              >
+                <Circle className="h-4 w-4 mr-1" />
+                Ungelesen
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+                className="hidden sm:flex"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
