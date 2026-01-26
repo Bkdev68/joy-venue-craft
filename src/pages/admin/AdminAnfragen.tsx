@@ -62,8 +62,11 @@ import {
   Loader2,
   FileText,
   Trash2,
-  X
+  X,
+  RotateCcw,
+  Trash
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -92,6 +95,7 @@ type ContactSubmission = {
   company_country: string | null;
   is_read: boolean | null;
   created_at: string;
+  deleted_at: string | null;
 };
 
 export default function AdminAnfragen() {
@@ -103,6 +107,8 @@ export default function AdminAnfragen() {
   const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPermanentDeleteDialog, setShowPermanentDeleteDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<'inbox' | 'trash'>('inbox');
   
   // AI Response states
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
@@ -128,6 +134,10 @@ export default function AdminAnfragen() {
     },
   });
 
+  // Separate active and deleted submissions
+  const activeSubmissions = submissions.filter(s => !s.deleted_at);
+  const deletedSubmissions = submissions.filter(s => s.deleted_at);
+
   const markAsReadMutation = useMutation({
     mutationFn: async ({ id, is_read }: { id: string; is_read: boolean }) => {
       const { error } = await supabase
@@ -142,7 +152,48 @@ export default function AdminAnfragen() {
     },
   });
 
-  const deleteMutation = useMutation({
+  // Soft delete - move to trash
+  const softDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('contact_submissions')
+        .update({ deleted_at: new Date().toISOString() })
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-submissions'] });
+      setSelectedIds(new Set());
+      toast.success('In Papierkorb verschoben');
+    },
+    onError: () => {
+      toast.error('Fehler beim Löschen');
+    },
+  });
+
+  // Restore from trash
+  const restoreMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('contact_submissions')
+        .update({ deleted_at: null })
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-submissions'] });
+      setSelectedIds(new Set());
+      toast.success('Wiederhergestellt');
+    },
+    onError: () => {
+      toast.error('Fehler beim Wiederherstellen');
+    },
+  });
+
+  // Permanent delete
+  const permanentDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
         .from('contact_submissions')
@@ -154,13 +205,16 @@ export default function AdminAnfragen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contact-submissions'] });
       setSelectedIds(new Set());
-      toast.success('Anfragen gelöscht');
+      toast.success('Endgültig gelöscht');
     },
     onError: () => {
       toast.error('Fehler beim Löschen');
     },
   });
 
+  // Filter submissions based on active tab
+  const baseSubmissions = activeTab === 'inbox' ? activeSubmissions : deletedSubmissions;
+  
   // Filter submissions
   const filteredSubmissions = submissions.filter((s) => {
     const matchesSearch = 
@@ -178,7 +232,7 @@ export default function AdminAnfragen() {
     return matchesSearch && matchesSource && matchesType && matchesRead;
   });
 
-  const unreadCount = submissions.filter(s => !s.is_read).length;
+  const unreadCount = activeSubmissions.filter(s => !s.is_read).length;
 
   const handleViewSubmission = (submission: ContactSubmission) => {
     setSelectedSubmission(submission);
@@ -207,12 +261,26 @@ export default function AdminAnfragen() {
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
-    setShowDeleteDialog(true);
+    if (activeTab === 'trash') {
+      setShowPermanentDeleteDialog(true);
+    } else {
+      setShowDeleteDialog(true);
+    }
   };
 
-  const confirmDelete = () => {
-    deleteMutation.mutate(Array.from(selectedIds));
+  const confirmSoftDelete = () => {
+    softDeleteMutation.mutate(Array.from(selectedIds));
     setShowDeleteDialog(false);
+  };
+
+  const confirmPermanentDelete = () => {
+    permanentDeleteMutation.mutate(Array.from(selectedIds));
+    setShowPermanentDeleteDialog(false);
+  };
+
+  const handleRestoreSelected = () => {
+    if (selectedIds.size === 0) return;
+    restoreMutation.mutate(Array.from(selectedIds));
   };
 
   const markSelectedAsRead = (is_read: boolean) => {
@@ -353,24 +421,46 @@ export default function AdminAnfragen() {
   return (
     <AdminPageWrapper title="Kontaktanfragen">
       <Section>
-        {/* Compact Stats Row */}
-        <div className="flex items-center gap-4 mb-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Inbox className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{submissions.length}</span>
-            <span className="text-muted-foreground">Gesamt</span>
+        {/* Tabs for Inbox / Trash */}
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'inbox' | 'trash'); setSelectedIds(new Set()); }} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="inbox" className="flex items-center gap-2">
+              <Inbox className="h-4 w-4" />
+              Posteingang
+              {activeSubmissions.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{activeSubmissions.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="trash" className="flex items-center gap-2">
+              <Trash className="h-4 w-4" />
+              Papierkorb
+              {deletedSubmissions.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{deletedSubmissions.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Compact Stats Row - only show in inbox */}
+        {activeTab === 'inbox' && (
+          <div className="flex items-center gap-4 mb-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Inbox className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{activeSubmissions.length}</span>
+              <span className="text-muted-foreground">Gesamt</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Circle className="h-3 w-3 fill-primary text-primary" />
+              <span className="font-medium text-primary">{unreadCount}</span>
+              <span className="text-muted-foreground">Ungelesen</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{activeSubmissions.filter(s => s.source === 'embed').length}</span>
+              <span className="text-muted-foreground">Embed</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Circle className="h-3 w-3 fill-primary text-primary" />
-            <span className="font-medium text-primary">{unreadCount}</span>
-            <span className="text-muted-foreground">Ungelesen</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{submissions.filter(s => s.source === 'embed').length}</span>
-            <span className="text-muted-foreground">Embed</span>
-          </div>
-        </div>
+        )}
 
         {/* Selection Toolbar */}
         {selectedIds.size > 0 && (
@@ -387,30 +477,53 @@ export default function AdminAnfragen() {
               </Button>
             </div>
             <div className="flex items-center gap-1 flex-wrap">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteSelected}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Löschen
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markSelectedAsRead(true)}
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Gelesen
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markSelectedAsRead(false)}
-              >
-                <Circle className="h-4 w-4 mr-1" />
-                Ungelesen
-              </Button>
+              {activeTab === 'trash' ? (
+                <>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleRestoreSelected}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    Wiederherstellen
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Endgültig löschen
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Löschen
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => markSelectedAsRead(true)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Gelesen
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => markSelectedAsRead(false)}
+                  >
+                    <Circle className="h-4 w-4 mr-1" />
+                    Ungelesen
+                  </Button>
+                </>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -561,23 +674,41 @@ export default function AdminAnfragen() {
         </div>
 
         <div className="mt-2 text-xs text-muted-foreground text-center">
-          {filteredSubmissions.length} von {submissions.length} Anfragen
+          {filteredSubmissions.length} von {baseSubmissions.length} {activeTab === 'trash' ? 'gelöschten' : ''} Anfragen
         </div>
       </Section>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Soft Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Anfragen löschen?</AlertDialogTitle>
+            <AlertDialogTitle>In Papierkorb verschieben?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedIds.size} Anfrage(n) werden in den Papierkorb verschoben. Sie können dort wiederhergestellt oder endgültig gelöscht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSoftDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              In Papierkorb
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent Delete Confirmation Dialog */}
+      <AlertDialog open={showPermanentDeleteDialog} onOpenChange={setShowPermanentDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Endgültig löschen?</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedIds.size} Anfrage(n) werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Löschen
+            <AlertDialogAction onClick={confirmPermanentDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Endgültig löschen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
