@@ -40,6 +40,7 @@ export type Database = {
           duration_hours: number | null
           event_time: string | null
           event_type: string
+          google_calendar_event_id: string | null
           id: string
           message: string | null
           package_id: string | null
@@ -77,6 +78,7 @@ export type Database = {
           duration_hours?: number | null
           event_time?: string | null
           event_type: string
+          google_calendar_event_id?: string | null
           id?: string
           message?: string | null
           package_id?: string | null
@@ -114,6 +116,7 @@ export type Database = {
           duration_hours?: number | null
           event_time?: string | null
           event_type?: string
+          google_calendar_event_id?: string | null
           id?: string
           message?: string | null
           package_id?: string | null
