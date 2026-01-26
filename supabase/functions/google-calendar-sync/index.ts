@@ -255,6 +255,8 @@ async function createBookingEvent(booking: BookingData, accessToken: string): Pr
     throw new Error("GOOGLE_CALENDAR_ID not configured");
   }
 
+  console.log("Using calendar ID:", calendarId);
+
   const { start, end } = formatEventTime(booking.date, booking.event_time, booking.duration_hours);
   
   const staffInfo = booking.assigned_staff?.length 
