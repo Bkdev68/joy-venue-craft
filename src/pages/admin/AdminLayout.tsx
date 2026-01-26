@@ -23,7 +23,8 @@ import {
   X,
   Calculator,
   Inbox,
-  Euro
+  Euro,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
@@ -47,6 +48,7 @@ const navItems = [
   { href: '/admin/faq', icon: HelpCircle, label: 'FAQ' },
   { href: '/admin/inhalte', icon: FileText, label: 'Sonstige Inhalte' },
   { type: 'divider', label: 'System' },
+  { href: '/admin/benutzer', icon: Users, label: 'Benutzer' },
   { href: '/admin/preiseinstellungen', icon: Euro, label: 'Preiseinstellungen' },
   { href: '/admin/einstellungen', icon: Settings, label: 'Einstellungen' },
 ];

@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.send-ai-email]
 verify_jwt = false
+
+[functions.manage-users]
+verify_jwt = false
