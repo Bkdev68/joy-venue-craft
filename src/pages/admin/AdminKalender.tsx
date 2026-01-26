@@ -67,6 +67,7 @@ interface CalendarEvent {
   color: string;
   is_all_day: boolean;
   location: string | null;
+  google_calendar_event_id: string | null;
 }
 
 interface CalendarEntry {
@@ -243,14 +244,59 @@ export default function AdminKalender() {
     setEventDialogOpen(true);
   };
 
+  const syncToGoogleCalendar = async (
+    action: 'create' | 'update' | 'delete',
+    eventData: CalendarEvent
+  ) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+        body: {
+          action,
+          type: 'calendar_event',
+          calendarEvent: {
+            id: eventData.id,
+            title: eventData.title,
+            description: eventData.description,
+            event_date: eventData.event_date,
+            event_time: eventData.event_time,
+            end_time: eventData.end_time,
+            color: eventData.color,
+            is_all_day: eventData.is_all_day,
+            location: eventData.location,
+            google_calendar_event_id: eventData.google_calendar_event_id
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Google Calendar sync error:', error);
+        return;
+      }
+
+      if (data?.success) {
+        console.log('Google Calendar sync successful:', data.message);
+      }
+    } catch (error) {
+      console.error('Failed to sync with Google Calendar:', error);
+    }
+  };
+
   const handleDeleteEvent = async (eventId: string) => {
     try {
+      // Find the event to get its Google Calendar ID
+      const eventToDelete = events.find(e => e.id === eventId);
+      
       const { error } = await supabase
         .from('calendar_events')
         .delete()
         .eq('id', eventId);
 
       if (error) throw error;
+
+      // Sync deletion to Google Calendar
+      if (eventToDelete) {
+        await syncToGoogleCalendar('delete', eventToDelete);
+      }
 
       toast.success('Termin gelöscht');
       setDetailOpen(false);
@@ -287,13 +333,29 @@ export default function AdminKalender() {
           .eq('id', editingEvent.id);
 
         if (error) throw error;
+
+        // Sync update to Google Calendar
+        await syncToGoogleCalendar('update', {
+          ...eventData,
+          id: editingEvent.id,
+          google_calendar_event_id: editingEvent.google_calendar_event_id
+        } as CalendarEvent);
+
         toast.success('Termin aktualisiert');
       } else {
-        const { error } = await supabase
+        const { data: insertedEvent, error } = await supabase
           .from('calendar_events')
-          .insert(eventData);
+          .insert(eventData)
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Sync creation to Google Calendar
+        if (insertedEvent) {
+          await syncToGoogleCalendar('create', insertedEvent as CalendarEvent);
+        }
+
         toast.success('Termin erstellt');
       }
 
