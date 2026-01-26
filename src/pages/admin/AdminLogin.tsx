@@ -34,17 +34,12 @@ export default function AdminLogin() {
 
   // Handle case where login succeeded but user has no admin/editor role
   useEffect(() => {
+    // Only check after loading is complete and we have a session
     if (loginSuccess && !loading && session && !isAdmin) {
-      // Give a small delay to ensure role check has completed
-      const timeout = setTimeout(() => {
-        if (!isAdmin) {
-          toast.error('Sie haben keine Berechtigung für den Admin-Bereich');
-          supabase.auth.signOut();
-          setLoginSuccess(false);
-          setIsLoading(false);
-        }
-      }, 1000);
-      return () => clearTimeout(timeout);
+      toast.error('Sie haben keine Berechtigung für den Admin-Bereich');
+      supabase.auth.signOut();
+      setLoginSuccess(false);
+      setIsLoading(false);
     }
   }, [loginSuccess, loading, session, isAdmin]);
 
