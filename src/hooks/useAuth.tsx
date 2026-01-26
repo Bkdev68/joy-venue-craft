@@ -4,10 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIdleTimeout } from './useIdleTimeout';
 import { toast } from 'sonner';
 
+type UserRole = 'admin' | 'editor' | null;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  userRole: UserRole;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -18,28 +21,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAdminRole = async (userId: string) => {
+  // Check if user has any admin panel access (admin or editor)
+  const checkUserRole = async (userId: string): Promise<UserRole> => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .eq('role', 'admin')
         .maybeSingle();
       
       if (error) {
-        console.error('Error checking admin role:', error);
-        return false;
+        console.error('Error checking user role:', error);
+        return null;
       }
-      return !!data;
+      return data?.role as UserRole || null;
     } catch (err) {
-      console.error('Error in checkAdminRole:', err);
-      return false;
+      console.error('Error in checkUserRole:', err);
+      return null;
     }
   };
+
+  // isAdmin means user has access to admin panel (admin OR editor)
+  const isAdmin = userRole === 'admin' || userRole === 'editor';
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -48,13 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer admin check with setTimeout to avoid deadlock
+        // Defer role check with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
-            checkAdminRole(session.user.id).then(setIsAdmin);
+            checkUserRole(session.user.id).then(setUserRole);
           }, 0);
         } else {
-          setIsAdmin(false);
+          setUserRole(null);
         }
         
         setLoading(false);
@@ -67,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        checkAdminRole(session.user.id).then(setIsAdmin);
+        checkUserRole(session.user.id).then(setUserRole);
       }
       
       setLoading(false);
@@ -83,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setIsAdmin(false);
+    setUserRole(null);
   }, []);
 
   // Auto-logout after 5 minutes of inactivity for admin users
@@ -101,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, isAdmin, userRole, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
