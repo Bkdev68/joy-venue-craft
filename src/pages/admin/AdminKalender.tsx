@@ -86,7 +86,7 @@ interface CalendarEntry {
 
 const statusColors: Record<string, string> = {
   confirmed: 'bg-green-500',
-  completed: 'bg-blue-500',
+  completed: 'bg-purple-500',
   pending: 'bg-yellow-500',
   cancelled: 'bg-red-500',
 };
@@ -533,12 +533,20 @@ export default function AdminKalender() {
             Bestätigt
           </Badge>
           <Badge variant="outline" className="gap-1 flex-shrink-0">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <div className="w-2 h-2 rounded-full bg-purple-500" />
             Abgeschlossen
           </Badge>
           <Badge variant="outline" className="gap-1 flex-shrink-0">
             <div className="w-2 h-2 rounded-full bg-yellow-500" />
             Ausstehend
+          </Badge>
+          <Badge variant="outline" className="gap-1 flex-shrink-0">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+            Tag
+          </Badge>
+          <Badge variant="outline" className="gap-1 flex-shrink-0">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ef4444' }} />
+            Nacht
           </Badge>
           <Badge variant="outline" className="gap-1 flex-shrink-0">
             <CalendarPlus className="h-3 w-3" />
