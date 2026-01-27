@@ -591,10 +591,10 @@ async function fetchGoogleCalendarEvents(
     throw new Error("GOOGLE_CALENDAR_ID not configured");
   }
 
-  // Default to fetching events from 6 months ago to 12 months ahead
+  // Default to fetching events from 1 year ago to 5 years ahead
   const now = new Date();
-  const defaultTimeMin = timeMin || new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString();
-  const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 12, 1).toISOString();
+  const defaultTimeMin = timeMin || new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString();
+  const defaultTimeMax = timeMax || new Date(now.getFullYear() + 5, now.getMonth(), 1).toISOString();
 
   console.log(`Fetching Google Calendar events from ${defaultTimeMin} to ${defaultTimeMax}`);
 
