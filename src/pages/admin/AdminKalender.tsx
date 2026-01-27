@@ -442,15 +442,17 @@ export default function AdminKalender() {
       color: statusColors[b.status] || 'bg-gray-500',
       data: b
     })),
-    ...events.map(e => ({
-      id: e.id,
-      type: 'event' as const,
-      title: e.title,
-      date: e.event_date,
-      time: e.event_time,
-      color: e.color,
-      data: e
-    }))
+    ...events
+      .filter(e => e.event_type !== 'shift') // Schichten ausblenden
+      .map(e => ({
+        id: e.id,
+        type: 'event' as const,
+        title: e.title,
+        date: e.event_date,
+        time: e.event_time,
+        color: e.color,
+        data: e
+      }))
   ].filter(e => new Date(e.date) >= new Date(new Date().setHours(0,0,0,0)))
    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
