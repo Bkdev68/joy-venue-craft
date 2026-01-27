@@ -289,26 +289,40 @@ function getHexColor(colorId?: string): string {
   return colorMap[colorId || '9'] || '#3b82f6';
 }
 
-// Determine shift type based on time (day shift: 06:00-18:00, night shift: 18:00-06:00)
-function determineShiftColor(startTime?: string): string {
-  if (!startTime) return '#3b82f6'; // Default blue
+// Determine shift type based on title and time
+// "Tag" = Day shift (Blue), "Nacht" = Night shift (Red)
+function determineShiftColor(title?: string, startTime?: string): string {
+  if (!title) return '#3b82f6'; // Default blue
   
-  const [hours] = startTime.split(':').map(Number);
+  const lowerTitle = title.toLowerCase();
   
-  // Day shift: 06:00-18:00 -> Blue
-  // Night shift: 18:00-06:00 -> Red
-  if (hours >= 6 && hours < 18) {
-    return '#3b82f6'; // Blue for day shift
-  } else {
+  // Check title first - "Nacht" is always red, "Tag" is always blue
+  if (lowerTitle === 'nacht' || lowerTitle.includes('nachtschicht')) {
     return '#ef4444'; // Red for night shift
   }
+  if (lowerTitle === 'tag' || lowerTitle.includes('tagschicht')) {
+    return '#3b82f6'; // Blue for day shift
+  }
+  
+  // Fallback to time-based detection
+  if (startTime) {
+    const [hours] = startTime.split(':').map(Number);
+    // Night shift: 18:00-06:00 -> Red
+    if (hours >= 18 || hours < 6) {
+      return '#ef4444'; // Red for night shift
+    }
+  }
+  
+  return '#3b82f6'; // Default blue for day shift
 }
 
 // Check if an event looks like a shift (based on title patterns)
 function isShiftEvent(summary?: string): boolean {
   if (!summary) return false;
-  const lowerSummary = summary.toLowerCase();
+  const lowerSummary = summary.toLowerCase().trim();
   return (
+    lowerSummary === 'tag' ||
+    lowerSummary === 'nacht' ||
     lowerSummary.includes('schicht') ||
     lowerSummary.includes('shift') ||
     lowerSummary.includes('dienst') ||
@@ -707,7 +721,7 @@ async function importGoogleCalendarEvents(
       // Determine if this is a shift and assign appropriate color
       const isShift = isShiftEvent(gEvent.summary);
       const color = isShift 
-        ? determineShiftColor(eventTime || undefined) 
+        ? determineShiftColor(gEvent.summary, eventTime || undefined) 
         : getHexColor(gEvent.colorId);
 
       const eventData = {
