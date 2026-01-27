@@ -41,10 +41,33 @@ interface CalendarEventData {
 }
 
 interface SyncRequest {
-  action: "create" | "update" | "delete";
+  action: "create" | "update" | "delete" | "import";
   type: "booking" | "calendar_event";
   booking?: BookingData;
   calendarEvent?: CalendarEventData;
+  importOptions?: {
+    timeMin?: string;
+    timeMax?: string;
+  };
+}
+
+interface GoogleCalendarEvent {
+  id: string;
+  summary?: string;
+  description?: string;
+  start?: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  end?: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  location?: string;
+  colorId?: string;
+  status?: string;
 }
 
 // Get access token using service account credentials
@@ -246,6 +269,52 @@ function getColorId(hexColor?: string): string {
     '#eab308': '5',  // Yellow
   };
   return colorMap[hexColor || '#3b82f6'] || '9';
+}
+
+// Map Google Calendar colorId to hex color
+function getHexColor(colorId?: string): string {
+  const colorMap: Record<string, string> = {
+    '1': '#a4bdfc', // Lavender -> Blue
+    '2': '#7ae7bf', // Sage -> Green
+    '3': '#a855f7', // Purple
+    '4': '#ff887c', // Flamingo -> Pink/Red
+    '5': '#ec4899', // Pink
+    '6': '#f97316', // Orange
+    '7': '#14b8a6', // Teal
+    '8': '#e1e1e1', // Gray
+    '9': '#3b82f6', // Blue
+    '10': '#22c55e', // Green
+    '11': '#ef4444', // Red
+  };
+  return colorMap[colorId || '9'] || '#3b82f6';
+}
+
+// Determine shift type based on time (day shift: 06:00-18:00, night shift: 18:00-06:00)
+function determineShiftColor(startTime?: string): string {
+  if (!startTime) return '#3b82f6'; // Default blue
+  
+  const [hours] = startTime.split(':').map(Number);
+  
+  // Day shift: 06:00-18:00 -> Blue
+  // Night shift: 18:00-06:00 -> Red
+  if (hours >= 6 && hours < 18) {
+    return '#3b82f6'; // Blue for day shift
+  } else {
+    return '#ef4444'; // Red for night shift
+  }
+}
+
+// Check if an event looks like a shift (based on title patterns)
+function isShiftEvent(summary?: string): boolean {
+  if (!summary) return false;
+  const lowerSummary = summary.toLowerCase();
+  return (
+    lowerSummary.includes('schicht') ||
+    lowerSummary.includes('shift') ||
+    lowerSummary.includes('dienst') ||
+    lowerSummary.includes('arbeit') ||
+    /^[a-z]+\s+\d{1,2}:\d{2}/.test(lowerSummary) // Pattern like "Name 08:00"
+  );
 }
 
 // Create Google Calendar event for a booking
@@ -497,6 +566,203 @@ async function deleteCalendarEvent(eventId: string, accessToken: string): Promis
   console.log("Event deleted successfully");
 }
 
+// Fetch events from Google Calendar for import
+async function fetchGoogleCalendarEvents(
+  accessToken: string,
+  timeMin?: string,
+  timeMax?: string
+): Promise<GoogleCalendarEvent[]> {
+  const calendarId = Deno.env.get("GOOGLE_CALENDAR_ID");
+  if (!calendarId) {
+    throw new Error("GOOGLE_CALENDAR_ID not configured");
+  }
+
+  // Default to fetching events from 3 months ago to 6 months ahead
+  const now = new Date();
+  const defaultTimeMin = timeMin || new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString();
+  const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 6, 1).toISOString();
+
+  console.log(`Fetching Google Calendar events from ${defaultTimeMin} to ${defaultTimeMax}`);
+
+  const params = new URLSearchParams({
+    timeMin: defaultTimeMin,
+    timeMax: defaultTimeMax,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '500',
+  });
+
+  const response = await fetch(
+    `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Failed to fetch events:", error);
+    throw new Error(`Failed to fetch calendar events: ${error}`);
+  }
+
+  const data = await response.json();
+  console.log(`Fetched ${data.items?.length || 0} events from Google Calendar`);
+  
+  return data.items || [];
+}
+
+// Import events from Google Calendar to local database
+async function importGoogleCalendarEvents(
+  accessToken: string,
+  supabaseUrl: string,
+  supabaseKey: string,
+  timeMin?: string,
+  timeMax?: string
+): Promise<{ imported: number; updated: number; skipped: number }> {
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const googleEvents = await fetchGoogleCalendarEvents(accessToken, timeMin, timeMax);
+  
+  let imported = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  // Get existing events that have a Google Calendar event ID
+  const { data: existingEvents } = await supabase
+    .from('calendar_events')
+    .select('id, google_calendar_event_id');
+
+  const existingGoogleIds = new Set<string>();
+  const existingEventsMap = new Map<string, string>();
+  
+  if (existingEvents) {
+    for (const e of existingEvents) {
+      if (e.google_calendar_event_id) {
+        existingGoogleIds.add(e.google_calendar_event_id);
+        existingEventsMap.set(e.google_calendar_event_id, e.id);
+      }
+    }
+  }
+
+  // Also check bookings for Google Calendar IDs to avoid duplicates
+  const { data: existingBookings } = await supabase
+    .from('bookings')
+    .select('id, google_calendar_event_id');
+
+  const bookingGoogleIds = new Set<string>();
+  if (existingBookings) {
+    for (const b of existingBookings) {
+      if (b.google_calendar_event_id) {
+        bookingGoogleIds.add(b.google_calendar_event_id);
+      }
+    }
+  }
+
+  for (const gEvent of googleEvents) {
+    try {
+      // Skip cancelled events
+      if (gEvent.status === 'cancelled') {
+        skipped++;
+        continue;
+      }
+
+      // Skip if this event originated from our app (check for app-specific markers)
+      if (gEvent.summary?.startsWith('📸') || gEvent.summary?.startsWith('📅')) {
+        skipped++;
+        continue;
+      }
+
+      // Skip if already linked to a booking
+      if (bookingGoogleIds.has(gEvent.id)) {
+        skipped++;
+        continue;
+      }
+
+      // Parse date/time
+      let eventDate: string;
+      let eventTime: string | null = null;
+      let endTime: string | null = null;
+      let isAllDay = false;
+
+      if (gEvent.start?.date) {
+        // All-day event
+        eventDate = gEvent.start.date;
+        isAllDay = true;
+      } else if (gEvent.start?.dateTime) {
+        const startDt = new Date(gEvent.start.dateTime);
+        eventDate = startDt.toISOString().split('T')[0];
+        eventTime = startDt.toTimeString().slice(0, 5);
+
+        if (gEvent.end?.dateTime) {
+          const endDt = new Date(gEvent.end.dateTime);
+          endTime = endDt.toTimeString().slice(0, 5);
+        }
+      } else {
+        // Skip events without proper date
+        skipped++;
+        continue;
+      }
+
+      // Determine if this is a shift and assign appropriate color
+      const isShift = isShiftEvent(gEvent.summary);
+      const color = isShift 
+        ? determineShiftColor(eventTime || undefined) 
+        : getHexColor(gEvent.colorId);
+
+      const eventData = {
+        title: (gEvent.summary || 'Importierter Termin').replace(/^(📸|📅)\s*/, ''),
+        description: gEvent.description || null,
+        event_date: eventDate,
+        event_time: eventTime,
+        end_time: endTime,
+        color: color,
+        is_all_day: isAllDay,
+        location: gEvent.location || null,
+        event_type: isShift ? 'shift' : 'imported',
+        google_calendar_event_id: gEvent.id,
+      };
+
+      // Check if event already exists
+      if (existingGoogleIds.has(gEvent.id)) {
+        // Update existing event
+        const existingEventId = existingEventsMap.get(gEvent.id);
+        if (existingEventId) {
+          const { error } = await supabase
+            .from('calendar_events')
+            .update(eventData)
+            .eq('id', existingEventId);
+
+          if (error) {
+            console.error(`Failed to update event ${gEvent.id}:`, error);
+            skipped++;
+          } else {
+            updated++;
+          }
+        }
+      } else {
+        // Create new event
+        const { error } = await supabase
+          .from('calendar_events')
+          .insert(eventData);
+
+        if (error) {
+          console.error(`Failed to import event ${gEvent.id}:`, error);
+          skipped++;
+        } else {
+          imported++;
+        }
+      }
+    } catch (error) {
+      console.error(`Error processing event ${gEvent.id}:`, error);
+      skipped++;
+    }
+  }
+
+  console.log(`Import complete: ${imported} imported, ${updated} updated, ${skipped} skipped`);
+  return { imported, updated, skipped };
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -504,7 +770,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, type, booking, calendarEvent } = await req.json() as SyncRequest;
+    const { action, type, booking, calendarEvent, importOptions } = await req.json() as SyncRequest;
     
     // Handle legacy requests (without type field)
     const eventType = type || "booking";
@@ -519,7 +785,28 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let result: { success: boolean; eventId?: string; message?: string };
+    let result: { success: boolean; eventId?: string; message?: string; imported?: number; updated?: number; skipped?: number };
+
+    // Handle import action
+    if (action === "import") {
+      const importResult = await importGoogleCalendarEvents(
+        accessToken,
+        supabaseUrl,
+        supabaseKey,
+        importOptions?.timeMin,
+        importOptions?.timeMax
+      );
+      
+      result = {
+        success: true,
+        message: `${importResult.imported} importiert, ${importResult.updated} aktualisiert, ${importResult.skipped} übersprungen`,
+        ...importResult
+      };
+      
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (eventType === "booking" && booking) {
       // Handle booking sync
