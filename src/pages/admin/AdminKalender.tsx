@@ -28,7 +28,8 @@ import {
   Users,
   RefreshCw,
   Check,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -113,6 +114,7 @@ export default function AdminKalender() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEntry, setSelectedEntry] = useState<CalendarEntry | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -425,6 +427,37 @@ export default function AdminKalender() {
     }
   };
 
+  // Import events from Google Calendar
+  const handleImportFromGoogle = async () => {
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+        body: {
+          action: 'import',
+          type: 'calendar_event'
+        }
+      });
+
+      if (error) {
+        console.error('Import error:', error);
+        toast.error('Fehler beim Import');
+        return;
+      }
+
+      if (data?.success) {
+        toast.success(`Import abgeschlossen: ${data.message}`);
+        await fetchData();
+      } else {
+        toast.error(data?.error || 'Import fehlgeschlagen');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Fehler beim Import von Google Kalender');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
   const weekDaysFull = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -470,12 +503,21 @@ export default function AdminKalender() {
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button 
               variant="outline" 
+              onClick={handleImportFromGoogle} 
+              disabled={importing}
+              className="w-full sm:w-auto"
+            >
+              <Download className={cn("h-4 w-4 mr-2", importing && "animate-bounce")} />
+              {importing ? 'Importiere...' : 'Von Google importieren'}
+            </Button>
+            <Button 
+              variant="outline" 
               onClick={handleSyncAllToGoogle} 
               disabled={syncing}
               className="w-full sm:w-auto"
             >
               <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
-              {syncing ? 'Synchronisiere...' : 'Mit Google synchronisieren'}
+              {syncing ? 'Synchronisiere...' : 'Zu Google exportieren'}
             </Button>
             <Button onClick={handleAddEvent} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
