@@ -29,8 +29,15 @@ import {
   RefreshCw,
   Check,
   AlertCircle,
-  Download
+  Download,
+  MoreVertical
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -500,29 +507,34 @@ export default function AdminKalender() {
               Übersicht aller Termine und Aufträge
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button 
-              variant="outline" 
-              onClick={handleImportFromGoogle} 
-              disabled={importing}
-              className="w-full sm:w-auto"
-            >
-              <Download className={cn("h-4 w-4 mr-2", importing && "animate-bounce")} />
-              {importing ? 'Importiere...' : 'Von Google importieren'}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleSyncAllToGoogle} 
-              disabled={syncing}
-              className="w-full sm:w-auto"
-            >
-              <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
-              {syncing ? 'Synchronisiere...' : 'Zu Google exportieren'}
-            </Button>
-            <Button onClick={handleAddEvent} className="w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button onClick={handleAddEvent} className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" />
               Termin hinzufügen
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={handleImportFromGoogle}
+                  disabled={importing}
+                >
+                  <Download className={cn("h-4 w-4 mr-2", importing && "animate-bounce")} />
+                  {importing ? 'Importiere...' : 'Von Google importieren'}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleSyncAllToGoogle}
+                  disabled={syncing}
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
+                  {syncing ? 'Synchronisiere...' : 'Zu Google exportieren'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
