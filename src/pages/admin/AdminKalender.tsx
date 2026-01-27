@@ -612,24 +612,26 @@ export default function AdminKalender() {
                     {format(day, 'd')}
                   </div>
                   
-                  {/* Mobile: Show dots only */}
-                  <div className="md:hidden flex flex-wrap gap-0.5 justify-center">
-                    {dayEntries.slice(0, 4).map(entry => (
-                      <div
+                  {/* Mobile: Show entry labels */}
+                  <div className="md:hidden flex flex-col gap-0.5">
+                    {dayEntries.slice(0, 2).map(entry => (
+                      <button
                         key={entry.id}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEntryClick(entry);
                         }}
                         className={cn(
-                          "w-1.5 h-1.5 rounded-full",
+                          "w-full text-[8px] px-0.5 py-0.5 rounded text-white font-medium truncate text-center",
                           entry.type === 'booking' ? entry.color : ''
                         )}
                         style={entry.type === 'event' ? { backgroundColor: entry.color } : {}}
-                      />
+                      >
+                        {entry.title.length > 6 ? entry.title.slice(0, 5) + '…' : entry.title}
+                      </button>
                     ))}
-                    {dayEntries.length > 4 && (
-                      <div className="text-[8px] text-muted-foreground">+{dayEntries.length - 4}</div>
+                    {dayEntries.length > 2 && (
+                      <div className="text-[7px] text-muted-foreground text-center">+{dayEntries.length - 2}</div>
                     )}
                   </div>
 
